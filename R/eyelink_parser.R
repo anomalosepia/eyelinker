@@ -31,13 +31,18 @@ read.asc <- function(fname)
 
     #Convert to ASCII
     inp <- stri_enc_toascii(inp)
+
+    #Check if any actual data recorded in file
+    if (!any(str_detect(inp, "^START"))) {
+        stop("No samples or events found in .asc file.")
+    }
+
+    #Read metadata from file before processing
+    info <- getInfo(inp)
+    has.raw <- length(str_select(inp, "^SAMPLES") > 0)
     
     #Filter out empty lines, comments, trailing whitespace
     inp <- str_select(inp,"^\\w*$",reverse=TRUE) %>% str_select("^#",reverse=TRUE) %>% str_select("^/",reverse=TRUE) %>% str_trim(side="right")
-
-    #Read meta-data from the "SAMPLES" line
-    info <- getInfo(inp)
-    has.raw <- !is.na(info)
     
     #Just to spite us, there's an inconsistency in how HTARG info is encoded (missing tab)
     #We fix it if necessary
@@ -89,20 +94,20 @@ read.asc <- function(fname)
 
 process.block.header <- function(blk)
 {
-    endh <- str_detect(blk,'^SAMPLES') %>% which
+    endh <- str_detect(blk, '^SAMPLES') %>% which
     has.samples <- TRUE
     #if raw data is missing, then no SAMPLES line
-    if (length(endh)!=1)
+    if (length(endh) != 1)
     {
         endh <- str_detect(blk,'^EVENTS') %>% which
         has.samples <- FALSE
     }
-    hd <-blk[1:endh]
-    #Parse  the EVENTS line 
+    hd <- blk[1:endh]
+    #Parse the EVENTS line 
     ev <- str_select(hd,"^EVENTS")
     regex.num <- "([-+]?[0-9]*\\.?[0-9]+)"
-    srate <-str_match(ev,paste0("RATE\t",regex.num))[,2] %>% as.numeric
-    tracking <-str_match(ev,"TRACKING\t(\\w+)")[,2]
+    srate <- str_match(ev,paste0("RATE\t",regex.num))[,2] %>% as.numeric
+    tracking <- str_match(ev,"TRACKING\t(\\w+)")[,2]
     filter <- str_match(ev,"FILTER\t(\\d)")[,2] %>% as.numeric
     events <- list(left=str_detect(ev,fixed("LEFT")),
                    right=str_detect(ev,fixed("RIGHT")),
@@ -120,8 +125,8 @@ process.block.header <- function(blk)
         #Now do the same thing for the SAMPLES line
         sm <- str_select(hd,"^SAMPLES")
         
-        srate <-str_match(sm,paste0("RATE\t",regex.num))[,2] %>% as.numeric
-        tracking <-str_match(sm,"TRACKING\t(\\w+)")[,2]
+        srate <- str_match(sm,paste0("RATE\t",regex.num))[,2] %>% as.numeric
+        tracking <- str_match(sm,"TRACKING\t(\\w+)")[,2]
         filter <- str_match(sm,"FILTER\t(\\d)")[,2] %>% as.numeric
 
         samples <- list(left=str_detect(sm,fixed("LEFT")),
@@ -238,7 +243,7 @@ process.block <- function(blk,info)
 {
     hd <- process.block.header(blk)
     blk <- hd$the.rest
-    if (is.na(info)) #no raw data
+    if (is.na(info$velocity)) #no raw data
     {
         raw <- NULL
         which.raw <- rep(FALSE,length(blk))
@@ -301,40 +306,91 @@ process.block <- function(blk,info)
     res
 }
 
-#Read some meta-data from the SAMPLES line
-#Inspired by similar code from cili library by Ben Acland
-getInfo <- function(inp)
-{
-    info <- list()
-    #Find the "SAMPLES" line
-    l <- str_select(inp,"^SAMPLES")
-    if (length(l)>0)
+getInfo <- function(inp) {
+    nonsample <- inp[str_detect(inp, "^\\D")]
+    header <- nonsample[str_detect(nonsample, "^\\*\\*")]
+    info <- data.frame(
+        date = NA, model = NA, version = NA, sample.rate = NA, cr = NA,
+        left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA,
+        filter.level = NA, velocity = NA, resolution = NA, htarg = NA, input = NA
+    )
+    #Get date/time of recording from file
+    info$date <- as.POSIXct(from.header(header, "DATE"), format = "%a %b %d %H:%M:%S %Y")
+    #Get tracker model/version info
+    version_info <- get.model(header)
+    info$model <- version_info[1]
+    info$version <- version_info[2]
+    #Get display size from file
+    display_xy <- nonsample[grepl("DISPLAY_COORDS", nonsample)]
+    display_xy <- gsub('.* DISPLAY_COORDS\\s+(.*)', '\\1', display_xy)
+    display_xy <- as.numeric(unlist(strsplit(display_xy, split = '\\s+')))
+    info$screen.x <- display_xy[3] - display_xy[1] + 1
+    info$screen.y <- display_xy[4] - display_xy[2] + 1
+    #Find the last config line in file
+    config <- nonsample[grepl("^EVENTS|^SAMPLES", nonsample)]
+    config <- config[length(config)]
+    if (length(config) > 0)
     {
-        l <- l[[1]]
-        info$velocity <- str_detect(l,fixed("VEL"))
-        info$resolution <- str_detect(l,fixed("RES"))
+        info$sample.rate <- ifelse(
+            grepl('RATE', config),
+            as.numeric(gsub('.*RATE\\s+([0-9]+\\.[0-9]+).*', '\\1', config)),
+            NA
+        )
+        info$cr <- grepl("\tCR", config)
+        info$filter.level <- ifelse(
+            grepl('FILTER', config),
+            as.numeric(gsub('.*FILTER\\s+([0-9]).*', '\\1', config)),
+            NA
+        )
+        info$velocity <- grepl("\tVEL", config)
+        info$resolution <- grepl("\tRES", config)
         #Even in remote setups, the target information may not be recorded 
         #e.g.: binoRemote250.asc
         #so we make sure it actually is
         info$htarg <- FALSE
-        if (str_detect(l,fixed("HTARG")))
+        if (grepl("\tHTARG", config))
         {
-            #Normally the htarg stuff is just twelve dots in a row, but in case there are errors we need
-            #the following regexp.
+            #Normally the htarg stuff is just twelve dots in a row, but in case
+            #there are errors we need the following regexp.
             pat <- "(M|\\.)(A|\\.)(N|\\.)(C|\\.)(F|\\.)(T|\\.)(B|\\.)(L|\\.)(R|\\.)(T|\\.)(B|\\.)(L|\\.)(R|\\.)"
-            info$htarg <- str_detect(inp,pat) %>% any
+            info$htarg <- str_detect(inp, pat) %>% any
         }
-        info$input <- str_detect(l,fixed("INPUT"))
-        info$left <- str_detect(l,fixed("LEFT"))
-        info$right <- str_detect(l,fixed("RIGHT"))
-        info$cr <- str_detect(l,fixed("CR"))
+        info$input <- grepl("\tINPUT", config)
+        info$left <- grepl("\tLEFT", config)
+        info$right <- grepl("\tRIGHT", config)
         info$mono <- !(info$right & info$left)
     }
-    else #NO SAMPLES!!!
-    {
-        info <- NA
-    }
     info
+}
+
+from.header <- function(header, field) {
+    s <- header[grepl(paste0("\\*\\* ", field), header)]
+    ifelse(length(s) > 0, gsub(paste0("\\*\\* ", field, ": (.*)"), "\\1", s), NA)
+}
+
+get.model <- function(header) {
+    version_str <- from.header(header, "VERSION")
+    version_str2 <- header[grepl("\\*\\* EYELINK II", header)]
+    if (is.na(version_str)) {
+        model <- "Unknown"
+        ver_num <- "Unknown"
+    } else if (version_str != 'EYELINK II 1') {
+        model <- "EyeLink I"
+        ver_num <- gsub('.* ([0-9]\\.[0-9]+) \\(.*', '\\1', version_str)
+    } else {
+        ver_num <- gsub('.* v(.*) [[:alpha:]].*', '\\1', version_str2)
+        model <- ifelse(as.numeric(ver_num) < 2.4,
+            'EyeLink II',
+            ifelse(as.numeric(ver_num) < 5,
+                'EyeLink 1000',
+                ifelse(as.numeric(ver_num) < 6,
+                    'EyeLink 1000 Plus',
+                    'EyeLink Portable Duo'
+                )
+            )
+        )
+    }
+    return(c(model, ver_num))
 }
 
 #Column names for the raw data

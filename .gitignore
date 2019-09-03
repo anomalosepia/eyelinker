@@ -1,3 +1,7 @@
+# Invisible files
+**/.*
+!.gitignore
+
 # Compiled Object files
 *.slo
 *.lo
