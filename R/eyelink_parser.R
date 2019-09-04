@@ -71,9 +71,11 @@ read.asc <- function(fname) {
 
     # Find blocks
     bl.start <- str_detect(inp, "^START") %>% which
-    bl.end <- str_detect(inp, "^END") %>% which
+    bl.end <- c(bl.start - 1, length(inp))
     nBlocks <- length(bl.start)
-    blocks <- llply(1:nBlocks, function(indB) process.block(inp[bl.start[indB]:bl.end[indB]], info))
+    blocks <- lapply(1:nBlocks, function(indB) {
+        process.block(inp[bl.start[indB]:bl.end[indB + 1]], info)
+    })
     ## collect <- function(vname)
     ##     {
     ##         valid <- Filter(function(ind) !is.null(blocks[[ind]][[vname]]),1:length(blocks))
@@ -87,6 +89,13 @@ read.asc <- function(fname) {
                 map_df(identity, .id = "block"),
             TRUE
         ))
+        if ("block" %in% names(out)) {
+            out$block <- as.numeric(out$block)
+        }
+        if ("eye" %in% names(out)) {
+            out$eye <- as.factor(out$eye)
+            levels(out$eye) <- c("L", "R")
+        }
         if (is(out, "try-error")) {
             sprintf("Failed to merge %s", vname) %>% warning
             # Merging has failed, return as list
@@ -244,13 +253,27 @@ process.events <- function(evt, events) {
 
     fix <- if (str_detect(evt, "^EFIX") %>% any) parse.fixations(evt, events) else NULL
     sacc <- if (str_detect(evt, "^ESAC") %>% any) parse.saccades(evt, events) else NULL
-    blinks <- if (str_detect(evt, "^SBLI") %>% any) parse.blinks(evt, events) else NULL
+    blinks <- if (str_detect(evt, "^EBLI") %>% any) parse.blinks(evt, events) else NULL
     list(fix = fix, sacc = sacc, msg = msg, blinks = blinks)
 }
 
 
 # A block is whatever one finds between a START and an END event
 process.block <- function(blk, info) {
+    # Usually, the ends of recording blocks in ASC files are marked with END lines, but sometimes
+    # these are missing (e.g. if recording ends unexpectedly). If an END is present, only content
+    # before it in the block will be processed. Otherwise, the whole block until the next START
+    # is processed.
+    block.end <- which(str_detect(blk, "^END"))
+    if (length(block.end) == 1) {
+        blk <- blk[1:block.end]
+    } else if (length(block.end) > 1) {
+        blk <- blk[1:block.end[1]]
+        warning(paste( # change to flag so there aren't multiple warnings at end?
+            "Start/end blocks appear to be malformed,",
+            "Please check the .asc file to verify whether it was processed correctly."
+        ))
+    }
     hd <- process.block.header(blk)
     blk <- hd$the.rest
     if (is.na(info$velocity)) {
