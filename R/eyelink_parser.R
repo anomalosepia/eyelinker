@@ -163,13 +163,32 @@ process.block.header <- function(blk) {
 
 # Turn a list of strings with tab-separated field into a data.frame
 tsv2df <- function(dat, coltypes) {
+    # Check to make sure number of coltypes actually matches number of columns
+    numcols <- length(strsplit(dat[1], split = "\\s+")[[1]])
+    coldiff <- numcols - length(coltypes)
+    if (coldiff > 0) {
+        coltypes <- c(coltypes, rep("c", coldiff))
+    }
+    # Merge lines of data into single string and process it using readr
     if (length(dat) == 1) {
         dat <- paste0(dat, "\n")
     } else {
         dat <- paste0(dat, collapse = "\n")
     }
-    out <- read_tsv(dat, col_names = FALSE, col_types = paste0(coltypes, collapse = ""))
-    ##        if (!(is.null(attr(suppressWarnings(out), "problems")))) browser()
+    out <- read_tsv(dat, col_names = FALSE, col_types = paste0(coltypes, collapse = ""), na = ".")
+    # If there were any extra unexpected columns, and those columns are all "."s, just drop them
+    # (yes, this inexplicably happens with some files)
+    if (coldiff > 0) {
+        for (i in (numcols - coldiff + 1):numcols) {
+            if (length(unique(out[, i])) == 1 & is.na(unique(out[, i]))) {
+                out[, i] <- NULL
+            }
+        }
+    }
+    #if (!(is.null(attr(suppressWarnings(out), "problems")))) {
+    #    browser()
+    #    stop()
+    #}
     out
 }
 
@@ -293,9 +312,12 @@ process.block <- function(blk, info) {
 
         # Filter out all the lines where eye position is missing, they're pointless
         # and stored in an inconsistent manner
-        iscrap <- str_detect(raw, "\\s+\\.\\s+\\.\\s+")
-        crap <- raw[iscrap]
-        raw <- raw[!iscrap]
+        eye_missing <- str_detect(raw, "\\s+\\.\\s+\\.\\s+")
+        validrow_regex <- paste(rep("[^ ]+", length(raw.colnames)), collapse = "\\s+")
+        is_valid <- str_detect(raw, validrow_regex)
+        if (!all(!is_valid)) {
+            raw <- raw[!(eye_missing & !is_valid)]
+        }
         if (length(raw) > 0) {
             # If we have some data left, turn into data.frame
             raw <- tsv2df(raw, raw.coltypes)
@@ -309,15 +331,15 @@ process.block <- function(blk, info) {
                 #names(raw)[1:length(raw.colnames)] <- raw.colnames
                 names(raw)[1] <- "time"
             }
-            nCol <- ncol(raw)
-            if (any(iscrap)) {
-                crapmat <- matrix(NA, length(crap), nCol)
-                crapmat[, 1] <- as.numeric(str_match(crap, "^(\\d+)")[, 1])
-                crapmat <- as.data.frame(crapmat)
-                names(crapmat) <- names(raw)
-                raw <- rbind(raw, crapmat)
-                raw <- raw[order(raw$time), ]
-            }
+            #nCol <- ncol(raw)
+            #if (any(iscrap)) {
+            #    crapmat <- matrix(NA, length(crap), nCol)
+            #    crapmat[, 1] <- as.numeric(str_match(crap, "^(\\d+)")[, 1])
+            #    crapmat <- as.data.frame(crapmat)
+            #    names(crapmat) <- names(raw)
+            #    raw <- rbind(raw, crapmat)
+            #    raw <- raw[order(raw$time), ]
+            #}
         } else {
             warning("All data are missing in current block")
             raw <- NULL
@@ -351,7 +373,12 @@ getInfo <- function(inp) {
     info$version <- version_info[2]
     # Get display size from file
     display_xy <- nonsample[grepl("DISPLAY_COORDS", nonsample)]
-    display_xy <- gsub('.* DISPLAY_COORDS\\s+(.*)', '\\1', display_xy)
+    if (length(display_xy) > 0) {
+        display_xy <- gsub('.* DISPLAY_COORDS\\s+(.*)', '\\1', display_xy[1])
+    } else {
+        display_xy <- nonsample[grepl("GAZE_COORDS", nonsample)]
+        display_xy <- gsub('.* GAZE_COORDS\\s+(.*)', '\\1', display_xy[1])
+    }
     display_xy <- as.numeric(unlist(strsplit(display_xy, split = '\\s+')))
     info$screen.x <- display_xy[3] - display_xy[1] + 1
     info$screen.y <- display_xy[4] - display_xy[2] + 1
@@ -442,6 +469,10 @@ coln.raw <- function(info) {
     if (!info$mono) {
         eyev <- c(paste0(eyev, "l"), paste0(eyev, "r"))
         ctype <- rep(ctype, 2)
+    }
+    if (info$input) {
+        eyev <- c(eyev, 'input')
+        ctype <- c(ctype, 'd')
     }
 
     # With corneal reflections we need an extra column
