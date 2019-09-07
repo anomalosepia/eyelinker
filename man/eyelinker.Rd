@@ -4,7 +4,7 @@
 \name{eyelinker}
 \alias{eyelinker}
 \alias{eyelinker-package}
-\title{eyelinker: read raw data from Eyelink eyetrackers}
+\title{eyelinker: read raw data from EyeLink eye trackers into tidy(ish) data}
 \description{
 Eyelink eye trackers output a horrible mess, typically under
  the form of an .asc file. The file in question is an assorted collection of
@@ -13,4 +13,3 @@ Eyelink eye trackers output a horrible mess, typically under
 \details{
 The main function in the package is read.asc.
 }
-
