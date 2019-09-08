@@ -97,11 +97,11 @@ read.asc <- function(fname, raw = TRUE, saccades = TRUE, fixations = TRUE, blink
     }
     if (saccades) {
         is_sacc <- inp_first == "ESACC"
-        if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc])
+        if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
     }
     if (fixations) {
         is_fix <- inp_first == "EFIX"
-        if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix])
+        if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
     }
     if (blinks) {
         is_blink <- inp_first == "EBLINK"
@@ -167,40 +167,31 @@ process_raw <- function(raw, blocks, info) {
     raw_df
 }
 
-process_saccades <- function(saccades, blocks) {
+
+process_saccades <- function(saccades, blocks, info) {
 
     # Parse saccade data, dropping useless "ESACC" first column
     sacc_df <- read_table2(saccades, col_names = FALSE, na = ".")[, -1]
-
-    # Name columns based on whether data is monocular or binocular
-    cols <- c("eye", "stime", "etime", "dur", "sxp", "syp", "exp", "eyp", "ampl", "pv", "xr", "yr")
-    if (ncol(sacc_df) == 10) {
-        names(sacc_df) <- cols[1:10]
-    } else if (ncol(sacc_df) == 12) {
-        names(sacc_df) <- cols
-    }
+    names(sacc_df) <- get_sacc_header(info)
 
     # Move eye col to end & make factor, append block numbers to beginning of data frame
     sacc_df <- sacc_df[, c(2:ncol(sacc_df), 1)]
     sacc_df$eye <- factor(sacc_df$eye, levels = c("L", "R"))
     sacc_df <- add_column(sacc_df, block = blocks, .before = 1)
 
+    # Set amplitudes for any saccades missing start/end coords to NAs because they're wonky
+    ampl_cols <- which(str_detect(names(sacc_df), "ampl"))
+    sacc_df[is.na(sacc_df$sxp) | is.na(sacc_df$exp), ampl_cols] <- NA
+
     sacc_df
 }
 
 
-process_fixations <- function(fixations, blocks) {
+process_fixations <- function(fixations, blocks, info) {
 
     # Parse fixation data, dropping useless "EFIX" first column
     fix_df <- read_table2(fixations, col_names = FALSE, na = ".")[, -1]
-
-    # Name columns based on whether data is monocular or binocular
-    cols <- c("eye", "stime", "etime", "dur", "axp", "ayp", "aps", "xr", "yr")
-    if (ncol(fix_df) == 7) {
-        names(fix_df) <- cols[1:7]
-    } else if (ncol(fix_df) == 9) {
-        names(fix_df) <- cols
-    }
+    names(fix_df) <- get_fix_header(info)
 
     # Move eye col to end & make factor, append block numbers to beginning of data frame
     fix_df <- fix_df[, c(2:ncol(fix_df), 1)]
@@ -231,7 +222,7 @@ process_messages <- function(msgs, blocks) {
     # Process messages from tracker (needs stringi import)
     msg_mat <- stri_split_fixed(msgs, " ", 2, simplify = TRUE)
     msg_mat[, 1] <- substring(msg_mat[, 1], first = 5)
-    msg_df <- as_tibble(msg_mat, .name_repair = ~ c('time', 'text'))
+    msg_df <- as_tibble(msg_mat, .name_repair = ~ c("time", "text"))
     msg_df$time <- as.numeric(msg_df$time)
 
     # Append block numbers to beginning of data frame
@@ -298,8 +289,9 @@ get_info <- function(nonsample) {
     header <- nonsample[str_detect(nonsample, "^\\*\\*")]
     info <- data.frame(
         date = NA, model = NA, version = NA, sample.rate = NA, cr = NA,
-        left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA, mount = NA,
-        filter.level = NA, velocity = NA, resolution = NA, htarg = NA, input = NA
+        left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA,
+        mount = NA, filter.level = NA, sample.dtype = NA, event.dtype = NA,
+        velocity = NA, resolution = NA, htarg = NA, input = NA
     )
 
     # Get date/time of recording from file
@@ -317,21 +309,22 @@ get_info <- function(nonsample) {
     }
 
     # Get display size from file
-    display_xy <- nonsample[str_detect(nonsample, fixed("DISPLAY_COORDS"))]
-    if (length(display_xy) > 0) {
-        display_xy <- gsub('.* DISPLAY_COORDS\\s+(.*)', '\\1', display_xy[1])
-    } else {
-        display_xy <- nonsample[str_detect(nonsample, fixed("GAZE_COORDS"))]
-        display_xy <- gsub('.* GAZE_COORDS\\s+(.*)', '\\1', display_xy[1])
-    }
-    display_xy <- as.numeric(unlist(strsplit(display_xy, split = '\\s+')))
-    info$screen.x <- display_xy[3] - display_xy[1] + 1
-    info$screen.y <- display_xy[4] - display_xy[2] + 1
+    screen_res <- get_resolution(nonsample)
+    info$screen.x <- screen_res[1]
+    info$screen.y <- screen_res[2]
 
-    # Find the last config line in file
-    config <- nonsample[str_detect(nonsample, "^EVENTS|^SAMPLES")]
-    config <- config[length(config)]
-    if (length(config) > 0) {
+    # Find the samples and events config lines in the non-sample input
+    config_all <- nonsample[str_detect(nonsample, "^EVENTS|^SAMPLES")]
+    if (any(str_detect(config_all, "^EVENTS"))) {
+        config <- rev(config_all[str_detect(config_all, "^EVENTS")])[1]
+        info$event.dtype <- strsplit(config, "\\s+")[[1]][2]
+    }
+    if (any(str_detect(config_all, "^SAMPLES"))) {
+        config <- rev(config_all[str_detect(config_all, "^SAMPLES")])[1]
+        info$sample.dtype <- strsplit(config, "\\s+")[[1]][2]
+    }
+
+    if (length(config_all) > 0) {
         info$sample.rate <- ifelse(
             grepl('RATE', config),
             as.numeric(gsub('.*RATE\\s+([0-9]+\\.[0-9]+).*', '\\1', config)),
@@ -351,6 +344,7 @@ get_info <- function(nonsample) {
         info$right <- grepl("\tRIGHT", config)
         info$mono <- !(info$right & info$left)
     }
+
     info
 }
 
@@ -359,6 +353,22 @@ get_info <- function(nonsample) {
 from_header <- function(header, field) {
     s <- header[grepl(paste0("\\*\\* ", field), header)]
     ifelse(length(s) > 0, gsub(paste0("\\*\\* ", field, ": (.*)"), "\\1", s), NA)
+}
+
+
+# Get the display resolution of the stimulus computer from the file
+get_resolution <- function(nonsample) {
+
+    res <- c(NA, NA)
+    for (pattern in c("DISPLAY_COORDS", "GAZE_COORDS", "RESOLUTION")) {
+        display_xy <- nonsample[str_detect(nonsample, fixed(pattern))]
+        if (length(display_xy) == 0) next
+        display_xy <- gsub(paste0(".* ", pattern, "\\s+(.*)"), "\\1", display_xy[1])
+        display_xy <- as.numeric(unlist(strsplit(display_xy, split = "\\s+")))
+        res <- c(display_xy[3] - display_xy[1] + 1, display_xy[4] - display_xy[2] + 1)
+    }
+
+    res
 }
 
 
@@ -394,6 +404,7 @@ get_model <- function(header) {
 
 # Get info about the camera mount type for desk-mounted EyeLinks
 get_mount <- function(mount_str) {
+
     mounts <- list(
         "MTABLER" = "Desktop / Monocular / Head Stabilized",
         "BTABLER" = "Desktop / Binocular / Head Stabilized",
@@ -409,6 +420,7 @@ get_mount <- function(mount_str) {
         "BLRR" = "Long-Range Mount / Binocular / Head Stabilized"
     )
     mount <- ifelse(mount_str %in% names(mounts), mounts[[mount_str]], NA)
+
     mount
 }
 
@@ -432,8 +444,8 @@ get_raw_header <- function(info) {
         ctype <- rep(ctype, 2)
     }
     if (info$input) {
-        eyev <- c(eyev, 'input')
-        ctype <- c(ctype, 'd')
+        eyev <- c(eyev, "input")
+        ctype <- c(ctype, "d")
     }
     if (info$cr) {
         # With corneal reflections we need an extra column
@@ -447,4 +459,30 @@ get_raw_header <- function(info) {
     }
 
     list(names = c("time", eyev), types = c("i", ctype))
+}
+
+
+get_event_header <- function(info, xy_cols) {
+
+    base <- c("eye", "stime", "etime", "dur")
+    if (!info$mono) {
+        xy_cols <- c(xy_cols, "xr", "yr")
+    }
+    # If event data type is HREF, events contain both HREF and GAZE data, so there are extra columns
+    # (assuming true for PUPIL/raw too, but currently untested)
+    if (info$event.dtype != "GAZE") {
+        xy_cols <- c(paste0(tolower(info$event.dtype), ".", xy_cols), xy_cols)
+    }
+
+    c(base, xy_cols)
+}
+
+
+get_sacc_header <- function(info) {
+    get_event_header(info, c("sxp", "syp", "exp", "eyp", "ampl", "pv"))
+}
+
+
+get_fix_header <- function(info) {
+    get_event_header(info, c("axp", "ayp", "aps"))
 }
