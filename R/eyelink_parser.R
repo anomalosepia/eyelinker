@@ -44,6 +44,9 @@
 #  - Add parsing of calibration & drift correct info
 #  - Freshen up documentation & vignettes
 #  - Add function for reading multiple ASCs at once?
+#  - Add support for float time (check samples for . character?)
+#  - Add function for parsing button samples? They're stored in a weird format
+#  - Test parsing of href events w/ res data to make sure it still works
 
 read.asc <- function(fname, raw = TRUE, saccades = TRUE, fixations = TRUE, blinks = TRUE,
     msgs = TRUE, input = TRUE, buttons = TRUE) {
@@ -291,7 +294,7 @@ get_info <- function(nonsample) {
         date = NA, model = NA, version = NA, sample.rate = NA, cr = NA,
         left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA,
         mount = NA, filter.level = NA, sample.dtype = NA, event.dtype = NA,
-        velocity = NA, resolution = NA, htarg = NA, input = NA
+        velocity = NA, resolution = NA, htarg = NA, input = NA, buttons = NA
     )
 
     # Get date/time of recording from file
@@ -340,6 +343,7 @@ get_info <- function(nonsample) {
         info$resolution <- grepl("\tRES", config)
         info$htarg <- grepl("\tHTARG", config)
         info$input <- grepl("\tINPUT", config)
+        info$buttons <- grepl("\tBUTTONS", config)
         info$left <- grepl("\tLEFT", config)
         info$right <- grepl("\tRIGHT", config)
         info$mono <- !(info$right & info$left)
@@ -431,20 +435,25 @@ get_raw_header <- function(info) {
     eyev <- c("xp", "yp", "ps")
     ctype <- rep("d", 3)
 
+    if (!info$mono) {
+        eyev <- c(paste0(eyev, "l"), paste0(eyev, "r"))
+        ctype <- rep(ctype, 2)
+    }
     if (info$velocity) {
-        eyev <- c(eyev, "xv", "yv")
-        ctype <- c(ctype, rep("d", 2))
+        vel <- ifelse(info$mono, c("xv", "yv"), c("xvl", "yvl", "xvr", "yvr"))
+        eyev <- c(eyev, vel)
+        ctype <- c(ctype, rep("d", length(vel)))
     }
     if (info$resolution) {
         eyev <- c(eyev, "xr", "yr")
         ctype <- c(ctype, rep("d", 2))
     }
-    if (!info$mono) {
-        eyev <- c(paste0(eyev, "l"), paste0(eyev, "r"))
-        ctype <- rep(ctype, 2)
-    }
     if (info$input) {
         eyev <- c(eyev, "input")
+        ctype <- c(ctype, "d")
+    }
+    if (info$buttons) {
+        eyev <- c(eyev, "buttons")
         ctype <- c(ctype, "d")
     }
     if (info$cr) {
@@ -465,7 +474,7 @@ get_raw_header <- function(info) {
 get_event_header <- function(info, xy_cols) {
 
     base <- c("eye", "stime", "etime", "dur")
-    if (!info$mono) {
+    if (info$res) {
         xy_cols <- c(xy_cols, "xr", "yr")
     }
     # If event data type is HREF, events contain both HREF and GAZE data, so there are extra columns
