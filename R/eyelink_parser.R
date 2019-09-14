@@ -1,34 +1,43 @@
-
-#' Read EyeLink ASC file
+#' Read EyeLink ASC Files
 #'
-#' ASC files contain raw data from EyeLink eye trackers (they're ASCII versions of the raw binaries
-#' which are themselves in EDF format). This utility tries to parse the data into something that's
-#' usable in R. If all you have is an EDF file, you need to convert it first using the edf2asc
-#' utility included in the EyeLink API kit.
+#' Imports data from EyeLink .ASC files into (relatively) tidy data frames for analysis and
+#' visualization. Event data and/or raw sample data from the files can be imported, along with
+#' information about the tracker hardware and configuration. All data is divided into numbered
+#' blocks using the "START" and "END" messages in the ASC file.
 #'
-#' Please read the EyeLink manual before using it for any serious work, very few checks are done to
-#' see if the output makes sense. read.asc will return data frames containing a "raw" signal as
-#' well as event series. Events are either system signals (triggers etc.), which are stored in the
-#' "msg" field, or correspond to the EyeLink's interpretation of the eye movement traces
-#' (fixations, saccades, blinks). ASC files are divided into blocks signaled by START and END
-#' signals. The block structure is reflected in the "block" field of the dataframes. The names of
-#' the various columns are the same as the ones used in the EyeLink manual, with two exceptions:
-#' "cr.info", which gives you information about corneal reflection tracking, and "remote.info",
-#' which gives you information about the state of the remote setup (if applicable). A series of
-#' periods (e.g. ".....") for either indicates that tracking is functioning properly, other values
-#' indicate problems with CR or remote tracking for that sample. Refer to the manual for details.
+#' ASC files can contain anywhere between 125 to 2000 rows of samples for every second of recording,
+#' meaning that the resulting files can be very large (1.2 million rows of samples for 20 minutes at
+#' 1000Hz). As a result, importing some ASC files can be slow, and the resulting data frames can
+#' take up 100's of MB of memory. To speed up import and greatly reduce memory load, you can choose
+#' to ignore raw samples and only import events by setting the samples parameter to \code{FALSE}.
 #'
-#' @title Read EyeLink ASC file
-#' @param fname file name
-#' @return a list with components
-#'   raw: raw eye positions, velocities, resolution, etc.
-#'   msg: messages (no attempt is made to parse them)
-#'   fix: fixations
-#'   blinks: blinks
-#'   sacc: saccades
-#'   info: metadata
+#' This function returns a list containing the following possible data frames: \describe{
+#'   \item{raw}{The raw sample data from the tracker, containing gaze and pupil data}
+#'   \item{sacc}{Contains data from saccade end events}
+#'   \item{fix}{Contains data from fixation end events}
+#'   \item{blinks}{Contains data from blink end events}
+#'   \item{msg}{Contains messages sent or received by the tracker during recording}
+#'   \item{input}{Contains data from input events}
+#'   \item{button}{Contains data from button press events}
+#'   \item{info}{Contains information about the tracker settings and configuration}
+#' }
+#' The names of the columns in these data frames correspond to column names given in the ASC
+#' section of the EyeLink 1000 User's Guide.
 #'
-#' @author Simon Barthelme
+#' Note that this function cannot import EDFs directly, they must be converted to plain-text ASC
+#' using the edf2asc utilty before importing.
+#'
+#' @usage
+#' read.asc(fname, samples = TRUE, events = TRUE)
+#'
+#' @param fname \code{character} vector indicating the name of the .asc file to import.
+#' @param samples \code{logical} indicating whether raw sample data should be imported. Defaults
+#'   to \code{TRUE}.
+#' @param events \code{logical} indicating whether event data (e.g. saccades, blinks, messages,
+#'    etc.) should be imported. Defaults to \code{TRUE}.
+#' @return A \code{list} of \code{\link[tibble]{tibble}}s containing data from the .asc file.
+#'
+#' @author Simon Barthelme & Austin Hurst
 #' @examples
 #' # Example file from SR research that ships with the package
 #' fpath <- system.file("extdata/mono500.asc.gz", package = "eyelinker")
@@ -39,17 +48,16 @@
 
 # TODO:
 #  - Check for multiple unique RECCFG lines, throw an error if so (can this even happen?)
-#  - Make note of eye data type (GAZE, HREF, PUPIL)
 #  - Add dummy data frames when data missing, so things like map_df can work
 #  - Add parsing of calibration & drift correct info
 #  - Freshen up documentation & vignettes
 #  - Add function for reading multiple ASCs at once?
-#  - Add support for float time (check samples for . character?)
 #  - Add function for parsing button samples? They're stored in a weird format
-#  - Test parsing of href events w/ res data to make sure it still works
+#  - Improve testthat usage w/ more comprehensive testing
 
-read.asc <- function(fname, raw = TRUE, saccades = TRUE, fixations = TRUE, blinks = TRUE,
-    msgs = TRUE, input = TRUE, buttons = TRUE) {
+
+
+read.asc <- function(fname, samples = TRUE, events = TRUE) {
 
     inp <- read_lines(fname)
 
@@ -95,33 +103,52 @@ read.asc <- function(fname, raw = TRUE, saccades = TRUE, fixations = TRUE, blink
 
     # Initialize list of data output and process different data types
     out <- list()
-    if (raw) {
+    if (samples) {
         if (any(is_raw)) out$raw <- process_raw(inp[is_raw], block[is_raw], info)
     }
-    if (saccades) {
+    if (events) {
         is_sacc <- inp_first == "ESACC"
         if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
-    }
-    if (fixations) {
+
         is_fix <- inp_first == "EFIX"
         if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
-    }
-    if (blinks) {
+
         is_blink <- inp_first == "EBLINK"
         if (any(is_blink)) out$blinks <- process_blinks(inp[is_blink], block[is_blink])
-    }
-    if (msgs) {
+
         is_msg <- inp_first == "MSG"
         if (any(is_msg)) out$msg <- process_messages(inp[is_msg], block[is_msg])
-    }
-    if (input) {
+
         is_input <- inp_first == "INPUT"
         if (any(is_input)) out$input <- process_input(inp[is_input], block[is_input])
-    }
-    if (buttons) {
+
         is_button <- inp_first == "BUTTON"
         if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
     }
+    #if (saccades) {
+    #    is_sacc <- inp_first == "ESACC"
+    #    if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
+    #}
+    #if (fixations) {
+    #    is_fix <- inp_first == "EFIX"
+    #    if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
+    #}
+    #if (blinks) {
+    #    is_blink <- inp_first == "EBLINK"
+    #    if (any(is_blink)) out$blinks <- process_blinks(inp[is_blink], block[is_blink])
+    #}
+    #if (msgs) {
+    #    is_msg <- inp_first == "MSG"
+    #    if (any(is_msg)) out$msg <- process_messages(inp[is_msg], block[is_msg])
+    #}
+    #if (input) {
+    #    is_input <- inp_first == "INPUT"
+    #    if (any(is_input)) out$input <- process_input(inp[is_input], block[is_input])
+    #}
+    #if (buttons) {
+    #    is_button <- inp_first == "BUTTON"
+    #    if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
+    #}
     out$info <- info
 
     out
@@ -130,8 +157,12 @@ read.asc <- function(fname, raw = TRUE, saccades = TRUE, fixations = TRUE, blink
 
 process_raw <- function(raw, blocks, info) {
 
+    # Determine if timestamps stored as floats (edf2asc option -ftime, useful for 2000 Hz)
+    first_time <- strsplit(raw[1], "\\s+")[[1]][1]
+    float_time <- str_detect(first_time, "\\.")
+
     # Generate column names and types based in info in header
-    colinfo <- get_raw_header(info)
+    colinfo <- get_raw_header(info, float_time)
     raw.colnames <- colinfo$names
     raw.coltypes <- colinfo$types
 
@@ -155,7 +186,7 @@ process_raw <- function(raw, blocks, info) {
     # Process raw sample data using readr
     coltypes <- paste0(raw.coltypes, collapse = "")
     raw_df <- read_tsv(raw, col_names = raw.colnames, col_types = coltypes, na = ".", progress = F)
-
+    
     # Append block numbers to beginning of data frame
     raw_df <- add_column(raw_df, block = blocks, .before = 1)
 
@@ -174,6 +205,7 @@ process_raw <- function(raw, blocks, info) {
 process_saccades <- function(saccades, blocks, info) {
 
     # Parse saccade data, dropping useless "ESACC" first column
+    if (length(saccades) == 1) saccades <- c(saccades, "")
     sacc_df <- read_table2(saccades, col_names = FALSE, na = ".")[, -1]
     names(sacc_df) <- get_sacc_header(info)
 
@@ -193,6 +225,7 @@ process_saccades <- function(saccades, blocks, info) {
 process_fixations <- function(fixations, blocks, info) {
 
     # Parse fixation data, dropping useless "EFIX" first column
+    if (length(fixations) == 1) fixations <- c(fixations, "")
     fix_df <- read_table2(fixations, col_names = FALSE, na = ".")[, -1]
     names(fix_df) <- get_fix_header(info)
 
@@ -208,6 +241,7 @@ process_fixations <- function(fixations, blocks, info) {
 process_blinks <- function(blinks, blocks) {
 
     # Parse and name blink data, dropping useless "EBLINK" first column
+    if (length(blinks) == 1) blinks <- c(blinks, "")
     blink_df <- read_table2(blinks, col_names = FALSE)[, -1]
     names(blink_df) <- c("eye", "stime", "etime", "dur")
 
@@ -238,6 +272,7 @@ process_messages <- function(msgs, blocks) {
 process_input <- function(input, blocks) {
 
     # Parse and name input data, dropping useless "INPUT" first column
+    if (length(input) == 1) input <- c(input, "")
     input_df <- read_table2(input, col_names = FALSE)[, -1]
     names(input_df) <- c("time", "value")
 
@@ -251,6 +286,7 @@ process_input <- function(input, blocks) {
 process_buttons <- function(button, blocks) {
 
     # Parse and name button data, dropping useless "BUTTON" first column
+    if (length(button) == 1) button <- c(button, "")
     button_df <- read_table2(button, col_names = FALSE)[, -1]
     names(button_df) <- c("time", "button", "state")
 
@@ -326,7 +362,6 @@ get_info <- function(nonsample) {
         config <- rev(config_all[str_detect(config_all, "^SAMPLES")])[1]
         info$sample.dtype <- strsplit(config, "\\s+")[[1]][2]
     }
-
     if (length(config_all) > 0) {
         info$sample.rate <- ifelse(
             grepl('RATE', config),
@@ -430,7 +465,7 @@ get_mount <- function(mount_str) {
 
 
 # Generate column names/types for raw sample data based on gathered info
-get_raw_header <- function(info) {
+get_raw_header <- function(info, float_time) {
 
     eyev <- c("xp", "yp", "ps")
     ctype <- rep("d", 3)
@@ -467,20 +502,19 @@ get_raw_header <- function(info) {
         ctype <- c(ctype, c("d", "d", "d", "c"))
     }
 
-    list(names = c("time", eyev), types = c("i", ctype))
+    list(names = c("time", eyev), types = c(ifelse(float_time, "d", "i"), ctype))
 }
 
 
 get_event_header <- function(info, xy_cols) {
 
     base <- c("eye", "stime", "etime", "dur")
+    # If event data type is HREF, events contain both HREF and GAZE data, so there are extra columns
+    if (info$event.dtype == "HREF") {
+        xy_cols <- c(paste0("href.", xy_cols), xy_cols)
+    }
     if (info$res) {
         xy_cols <- c(xy_cols, "xr", "yr")
-    }
-    # If event data type is HREF, events contain both HREF and GAZE data, so there are extra columns
-    # (assuming true for PUPIL/raw too, but currently untested)
-    if (info$event.dtype != "GAZE") {
-        xy_cols <- c(paste0(tolower(info$event.dtype), ".", xy_cols), xy_cols)
     }
 
     c(base, xy_cols)
