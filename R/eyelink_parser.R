@@ -125,30 +125,6 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
         is_button <- inp_first == "BUTTON"
         if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
     }
-    #if (saccades) {
-    #    is_sacc <- inp_first == "ESACC"
-    #    if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
-    #}
-    #if (fixations) {
-    #    is_fix <- inp_first == "EFIX"
-    #    if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
-    #}
-    #if (blinks) {
-    #    is_blink <- inp_first == "EBLINK"
-    #    if (any(is_blink)) out$blinks <- process_blinks(inp[is_blink], block[is_blink])
-    #}
-    #if (msgs) {
-    #    is_msg <- inp_first == "MSG"
-    #    if (any(is_msg)) out$msg <- process_messages(inp[is_msg], block[is_msg])
-    #}
-    #if (input) {
-    #    is_input <- inp_first == "INPUT"
-    #    if (any(is_input)) out$input <- process_input(inp[is_input], block[is_input])
-    #}
-    #if (buttons) {
-    #    is_button <- inp_first == "BUTTON"
-    #    if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
-    #}
     info$tracking <- NULL # needed for parsing, but otherwise redundant with CR
     out$info <- info
 
@@ -159,8 +135,7 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
 process_raw <- function(raw, blocks, info) {
 
     # Determine if timestamps stored as floats (edf2asc option -ftime, useful for 2000 Hz)
-    first_time <- strsplit(raw[1], "\\s+")[[1]][1]
-    float_time <- str_detect(first_time, "\\.")
+    float_time <- is_float(strsplit(raw[1], "\\s+")[[1]][1])
 
     # Generate column names and types based in info in header
     colinfo <- get_raw_header(info, float_time)
@@ -206,17 +181,27 @@ process_raw <- function(raw, blocks, info) {
 }
 
 
-process_saccades <- function(saccades, blocks, info) {
+process_events <- function(rows, blocks, colnames) {
 
-    # Parse saccade data, dropping useless "ESACC" first column
-    if (length(saccades) == 1) saccades <- c(saccades, "")
-    sacc_df <- read_table2(saccades, col_names = FALSE, na = ".")[, -1]
-    names(sacc_df) <- get_sacc_header(info)
+    # Parse data, dropping useless first column
+    if (length(rows) == 1) rows <- c(rows, "")
+    df <- read_table2(rows, col_names = FALSE, na = ".")[, -1]
+    names(df) <- colnames
 
     # Move eye col to end & make factor, append block numbers to beginning of data frame
-    sacc_df <- sacc_df[, c(2:ncol(sacc_df), 1)]
-    sacc_df$eye <- factor(sacc_df$eye, levels = c("L", "R"))
-    sacc_df <- add_column(sacc_df, block = blocks, .before = 1)
+    if ("eye" %in% colnames) {
+        df <- df[, c(2:ncol(df), 1)]
+        df$eye <- factor(df$eye, levels = c("L", "R"))
+    }
+    df <- add_column(df, block = blocks, .before = 1)
+
+    df
+}
+
+
+process_saccades <- function(saccades, blocks, info) {
+
+    sacc_df <- process_events(saccades, blocks, get_sacc_header(info))
 
     # Set amplitudes for any saccades missing start/end coords to NAs because they're wonky
     ampl_cols <- which(str_detect(names(sacc_df), "ampl"))
@@ -227,34 +212,12 @@ process_saccades <- function(saccades, blocks, info) {
 
 
 process_fixations <- function(fixations, blocks, info) {
-
-    # Parse fixation data, dropping useless "EFIX" first column
-    if (length(fixations) == 1) fixations <- c(fixations, "")
-    fix_df <- read_table2(fixations, col_names = FALSE, na = ".")[, -1]
-    names(fix_df) <- get_fix_header(info)
-
-    # Move eye col to end & make factor, append block numbers to beginning of data frame
-    fix_df <- fix_df[, c(2:ncol(fix_df), 1)]
-    fix_df$eye <- factor(fix_df$eye, levels = c("L", "R"))
-    fix_df <- add_column(fix_df, block = blocks, .before = 1)
-
-    fix_df
+    process_events(fixations, blocks, get_fix_header(info))
 }
 
 
 process_blinks <- function(blinks, blocks) {
-
-    # Parse and name blink data, dropping useless "EBLINK" first column
-    if (length(blinks) == 1) blinks <- c(blinks, "")
-    blink_df <- read_table2(blinks, col_names = FALSE)[, -1]
-    names(blink_df) <- c("eye", "stime", "etime", "dur")
-
-    # Move eye col to end & make factor, append block numbers to beginning of data frame
-    blink_df <- blink_df[, c(2:ncol(blink_df), 1)]
-    blink_df$eye <- factor(blink_df$eye, levels = c("L", "R"))
-    blink_df <- add_column(blink_df, block = blocks, .before = 1)
-
-    blink_df
+    process_events(blinks, blocks, c("eye", "stime", "etime", "dur"))
 }
 
 
@@ -274,30 +237,12 @@ process_messages <- function(msgs, blocks) {
 
 
 process_input <- function(input, blocks) {
-
-    # Parse and name input data, dropping useless "INPUT" first column
-    if (length(input) == 1) input <- c(input, "")
-    input_df <- read_table2(input, col_names = FALSE)[, -1]
-    names(input_df) <- c("time", "value")
-
-    # Append block numbers to beginning of data frame
-    input_df <- add_column(input_df, block = blocks, .before = 1)
-
-    input_df
+    process_events(input, blocks, c("time", "value"))
 }
 
 
 process_buttons <- function(button, blocks) {
-
-    # Parse and name button data, dropping useless "BUTTON" first column
-    if (length(button) == 1) button <- c(button, "")
-    button_df <- read_table2(button, col_names = FALSE)[, -1]
-    names(button_df) <- c("time", "button", "state")
-
-    # Append block numbers to beginning of data frame
-    button_df <- add_column(button_df, block = blocks, .before = 1)
-
-    button_df
+    process_events(button, blocks, c("time", "button", "state"))
 }
 
 
@@ -534,4 +479,9 @@ get_sacc_header <- function(info) {
 
 get_fix_header <- function(info) {
     get_event_header(info, c("axp", "ayp", "aps"))
+}
+
+
+is_float <- function(str) {
+    str_detect(str, "\\.")
 }
