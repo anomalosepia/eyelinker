@@ -149,6 +149,7 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
     #    is_button <- inp_first == "BUTTON"
     #    if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
     #}
+    info$tracking <- NULL # needed for parsing, but otherwise redundant with CR
     out$info <- info
 
     out
@@ -186,7 +187,10 @@ process_raw <- function(raw, blocks, info) {
     # Process raw sample data using readr
     coltypes <- paste0(raw.coltypes, collapse = "")
     raw_df <- read_tsv(raw, col_names = raw.colnames, col_types = coltypes, na = ".", progress = F)
-    
+    if (info$tracking & !info$cr) {
+        raw_df$cr.info <- NULL  # Drop CR column when not actually used
+    }
+
     # Append block numbers to beginning of data frame
     raw_df <- add_column(raw_df, block = blocks, .before = 1)
 
@@ -330,7 +334,8 @@ get_info <- function(nonsample) {
         date = NA, model = NA, version = NA, sample.rate = NA, cr = NA,
         left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA,
         mount = NA, filter.level = NA, sample.dtype = NA, event.dtype = NA,
-        velocity = NA, resolution = NA, htarg = NA, input = NA, buttons = NA
+        velocity = NA, resolution = NA, htarg = NA, input = NA, buttons = NA,
+        tracking = NA
     )
 
     # Get date/time of recording from file
@@ -368,6 +373,7 @@ get_info <- function(nonsample) {
             as.numeric(gsub('.*RATE\\s+([0-9]+\\.[0-9]+).*', '\\1', config)),
             NA
         )
+        info$tracking <- grepl('\tTRACKING', config)
         info$cr <- grepl("\tCR", config)
         info$filter.level <- ifelse(
             grepl('FILTER', config),
@@ -491,8 +497,8 @@ get_raw_header <- function(info, float_time) {
         eyev <- c(eyev, "buttons")
         ctype <- c(ctype, "d")
     }
-    if (info$cr) {
-        # With corneal reflections we need an extra column
+    if (info$tracking) {
+        # If "TRACKING" in header, cr.info is present in samples whether or not CR actually used
         eyev <- c(eyev, "cr.info")
         ctype <- c(ctype, "c")
     }
