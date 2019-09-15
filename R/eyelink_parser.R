@@ -259,7 +259,9 @@ handle_htarg <- function(inp, info, is_raw) {
             # Sometimes remote.info has no tab separating it from previous column, so we have to
             # insert one ourselves for read_tsv to work
             htarg_notab_regex <- paste0("(.*[0-9\\.])\\s(", htarg_regex, ")$")
-            inp[is_raw] <- str_replace_all(inp[is_raw], htarg_notab_regex, replacement = "\\1\t\\2")
+            has_htarg <- str_detect(inp[is_raw], htarg_notab_regex)
+            split_pos <- ifelse(info$mono, -14, -18) # which character to replace w/ tab
+            str_sub(inp[is_raw][has_htarg], split_pos, split_pos) <- "\t"
         }
     }
 
