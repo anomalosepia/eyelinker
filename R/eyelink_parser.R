@@ -79,7 +79,7 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
 
     # Do some extra processing/sanitizing if there's HTARG info in the file
     if (info$htarg) {
-        ret <- handle_htarg(inp, info, any(is_raw))
+        ret <- handle_htarg(inp, info, is_raw)
         inp <- ret[[1]]
         info <- ret[[2]]
     }
@@ -161,6 +161,7 @@ process_raw <- function(raw, blocks, info) {
 
     # Process raw sample data using readr
     coltypes <- paste0(raw.coltypes, collapse = "")
+    if (length(raw) == 1) raw <- c(raw, "")
     raw_df <- read_tsv(raw, col_names = raw.colnames, col_types = coltypes, na = ".", progress = F)
     if (info$tracking & !info$cr) {
         raw_df$cr.info <- NULL  # Drop CR column when not actually used
@@ -246,25 +247,20 @@ process_buttons <- function(button, blocks) {
 }
 
 
-handle_htarg <- function(inp, info, any_raw) {
+handle_htarg <- function(inp, info, is_raw) {
 
-    # First, check if any normal htarg in input because that's much faster
-    info$htarg <- any(str_detect(inp, fixed(".............")))
+    if (any(is_raw)) {
+        # In some cases HTARGET is in header but not samples, so we verify it's really there
+        first_sample <- inp[is_raw][1]
+        htarg_regex <- get_htarg_regex(!info$mono)
+        info$htarg <- str_detect(first_sample, htarg_regex)
 
-    if (!info$htarg) {
-        # Normally the htarg stuff is just twelve dots in a row, but in case
-        # there are errors we need the following regexp.
-        pat <- paste0(
-            "(M|\\.)(A|\\.)(N|\\.)(C|\\.)(F|\\.)(T|\\.)(B|\\.)",
-            "(L|\\.)(R|\\.)(T|\\.)(B|\\.)(L|\\.)(R|\\.)"
-        )
-        info$htarg <- any(str_detect(inp, pat))
-    }
-
-    # Just to spite us, there's an inconsistency in how HTARG info is encoded (missing tab).
-    # We fix it if necessary.
-    if (info$htarg && any_raw) {
-        inp <- str_replace_all(inp, fixed("............."), fixed("\t............."))
+        if (info$htarg) {
+            # Sometimes remote.info has no tab separating it from previous column, so we have to
+            # insert one ourselves for read_tsv to work
+            htarg_notab_regex <- paste0("(.*[0-9\\.])\\s(", htarg_regex, ")$")
+            inp[is_raw] <- str_replace_all(inp[is_raw], htarg_notab_regex, replacement = "\\1\t\\2")
+        }
     }
 
     list(inp, info)
@@ -426,7 +422,11 @@ get_raw_header <- function(info, float_time) {
         ctype <- rep(ctype, 2)
     }
     if (info$velocity) {
-        vel <- ifelse(info$mono, c("xv", "yv"), c("xvl", "yvl", "xvr", "yvr"))
+        if (info$mono) {
+            vel <- c("xv", "yv")
+        } else {
+            vel <- c("xvl", "yvl", "xvr", "yvr")
+        }
         eyev <- c(eyev, vel)
         ctype <- c(ctype, rep("d", length(vel)))
     }
@@ -479,6 +479,17 @@ get_sacc_header <- function(info) {
 
 get_fix_header <- function(info) {
     get_event_header(info, c("axp", "ayp", "aps"))
+}
+
+
+get_htarg_regex <- function(binocular) {
+
+    # HTARG info column consists of '.'s and/or letters (indicating problems)
+    htarg_errs <- ifelse(binocular, "MANCFTBLRTBLRTBLR", "MANCFTBLRTBLR")
+    htarg_errs <- strsplit(htarg_errs, split = "")[[1]]
+    htarg_regex <- paste0("(", htarg_errs, "|\\.)", collapse = "")
+
+    htarg_regex
 }
 
 
