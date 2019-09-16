@@ -2,43 +2,50 @@
 % Please edit documentation in R/eyelink_parser.R
 \name{read.asc}
 \alias{read.asc}
-\title{Read EyeLink ASC file}
+\title{Read EyeLink ASC Files}
 \usage{
-read.asc(fname, raw = TRUE, saccades = TRUE, fixations = TRUE,
-  blinks = TRUE, msgs = TRUE, input = TRUE, buttons = TRUE)
+read.asc(fname, samples = TRUE, events = TRUE)
 }
 \arguments{
-\item{fname}{file name}
+\item{fname}{\code{character} vector indicating the name of the .asc file to import.}
+
+\item{samples}{\code{logical} indicating whether raw sample data should be imported. Defaults
+to \code{TRUE}.}
+
+\item{events}{\code{logical} indicating whether event data (e.g. saccades, blinks, messages,
+etc.) should be imported. Defaults to \code{TRUE}.}
 }
 \value{
-a list with components
-  raw: raw eye positions, velocities, resolution, etc.
-  msg: messages (no attempt is made to parse them)
-  fix: fixations
-  blinks: blinks
-  sacc: saccades
-  info: metadata
+A \code{list} of \code{\link[tibble]{tibble}}s containing data from the .asc file.
 }
 \description{
-Read EyeLink ASC file
+Imports data from EyeLink .ASC files into (relatively) tidy data frames for analysis and
+visualization. Event data and/or raw sample data from the files can be imported, along with
+information about the tracker hardware and configuration. All data is divided into numbered
+blocks using the "START" and "END" messages in the ASC file.
 }
 \details{
-ASC files contain raw data from EyeLink eye trackers (they're ASCII versions of the raw binaries
-which are themselves in EDF format). This utility tries to parse the data into something that's
-usable in R. If all you have is an EDF file, you need to convert it first using the edf2asc
-utility included in the EyeLink API kit.
+ASC files can contain anywhere between 125 to 2000 rows of samples for every second of recording,
+meaning that the resulting files can be very large (1.2 million rows of samples for 20 minutes at
+1000Hz). As a result, importing some ASC files can be slow, and the resulting data frames can
+take up 100's of MB of memory. To speed up import and greatly reduce memory load, you can choose
+to ignore raw samples and only import events by setting the samples parameter to \code{FALSE}.
 
-Please read the EyeLink manual before using it for any serious work, very few checks are done to
-see if the output makes sense. read.asc will return data frames containing a "raw" signal as
-well as event series. Events are either system signals (triggers etc.), which are stored in the
-"msg" field, or correspond to the EyeLink's interpretation of the eye movement traces
-(fixations, saccades, blinks). ASC files are divided into blocks signaled by START and END
-signals. The block structure is reflected in the "block" field of the dataframes. The names of
-the various columns are the same as the ones used in the EyeLink manual, with two exceptions:
-"cr.info", which gives you information about corneal reflection tracking, and "remote.info",
-which gives you information about the state of the remote setup (if applicable). A series of
-periods (e.g. ".....") for either indicates that tracking is functioning properly, other values
-indicate problems with CR or remote tracking for that sample. Refer to the manual for details.
+This function returns a list containing the following possible data frames: \describe{
+  \item{raw}{The raw sample data from the tracker, containing gaze and pupil data}
+  \item{sacc}{Contains data from saccade end events}
+  \item{fix}{Contains data from fixation end events}
+  \item{blinks}{Contains data from blink end events}
+  \item{msg}{Contains messages sent or received by the tracker during recording}
+  \item{input}{Contains data from input events}
+  \item{button}{Contains data from button press events}
+  \item{info}{Contains information about the tracker settings and configuration}
+}
+The names of the columns in these data frames correspond to column names given in the ASC
+section of the EyeLink 1000 User's Guide.
+
+Note that this function cannot import EDFs directly, they must be converted to plain-text ASC
+using the edf2asc utilty before importing.
 }
 \examples{
 # Example file from SR research that ships with the package
@@ -48,5 +55,5 @@ plot(dat$raw$time, dat$raw$xp, xlab = "Time (ms)", ylab = "Eye position along x-
 
 }
 \author{
-Simon Barthelme
+Simon Barthelme & Austin Hurst
 }

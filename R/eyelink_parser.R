@@ -56,10 +56,9 @@
 #  - Improve testthat usage w/ more comprehensive testing
 
 
-
 read.asc <- function(fname, samples = TRUE, events = TRUE) {
 
-    inp <- read_lines(fname)
+    inp <- read_lines(fname, progress = FALSE)
 
     # Convert to ASCII
     inp <- stri_enc_toascii(inp)

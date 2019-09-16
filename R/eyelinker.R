@@ -9,7 +9,7 @@
 #' @name eyelinker
 NULL
 
-#' @importFrom stringr str_replace_all str_detect fixed
+#' @importFrom stringr str_sub<- str_detect fixed
 #' @importFrom tibble as_tibble add_column
 #' @importFrom readr read_lines read_tsv read_table2
 #' @importFrom stringi stri_enc_toascii stri_split_regex stri_split_fixed stri_count_fixed

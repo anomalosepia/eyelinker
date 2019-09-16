@@ -1,31 +1,41 @@
-# Eyelinker: a package for reading EyeLink data
+# eyelinker
+
+-
 
 [![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://cran.rstudio.com/web/packages/eyelinker)
+[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
-Turns horrible EyeLink .asc files into less horrible R data structures.
+
+An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) tidy data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.
+
+![Plot of fixations and saccades from ASC](man/figures/ggplot_eye.png)
 
 **NOTE**: This branch is currently under development, and the internal ASC-reading logic has been
 rewritten entirely to improve compatibility and speed. Here is a short-list of the changes:
 
  - `read.asc` is now 4 to 5x faster than before
- - Rows with missing eye data now retain non-missing values instead of replacing all with NA
+ - Rows with missing eye data now retain non-missing values instead of replacing all with `NA`
  - ASC files with INPUT/BUTTON data are now supported
  - Is able to handle ASC files with malformed START/END blocks
+ - Is able to correctly parse ASC files with HREF events
  - The `$info` table now contains date of recording, tracker model, tracker mount type, display
    resolution, and sample rate information.
-
-However, this new version has only been tested with a handful of different .ASC files, and it is
-possible that this version breaks support for certain files workflows. If you encounter any issues
+ 
+However, it is possible that this version breaks support for certain files or workflows. If you encounter any issues
 with this version, please let me know and I'll do my best to fix them.
 
-To install this version of Eyelinker, you can use the `devtools` package:
+## Installation
 
 ```r
+# Install the latest release from CRAN:
+install.packages("eyelinker")
+
+# Install the latest development version from GitHub:
 require(devtools)
-devtools::install_github("a-hurst/eyelinker@simplified")
+devtools::install_github("a-hurst/eyelinker")
 ```
 
-### Usage
+## Usage
 
 ```r
 library(eyelinker)
@@ -39,4 +49,7 @@ plot(dat$raw$time, dat$raw$xp,xlab = "Time (ms)", ylab = "Eye position along x-a
 vignette("basics", package = "eyelinker")
 ```
 
-Author: Simon Barthelmé, CNRS, Gipsa-lab. See also: [cili](https://github.com/beOn/cili).
+## Credits
+
+* Author: Simon Barthelmé, CNRS, Gipsa-lab
+* Maintainer: Austin Hurst, University of Waterloo
