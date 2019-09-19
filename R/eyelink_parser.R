@@ -74,7 +74,7 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
 
     # Read metadata from file before processing
     is_raw <- str_detect(inp_first, "^[0-9]")
-    info <- get_info(inp[!is_raw])
+    info <- get_info(inp[!is_raw], inp_first[!is_raw])
 
     # Do some extra processing/sanitizing if there's HTARG info in the file
     if (info$htarg) {
@@ -159,9 +159,10 @@ process_raw <- function(raw, blocks, info) {
     }
 
     # Process raw sample data using readr
+    colnames <- raw.colnames
     coltypes <- paste0(raw.coltypes, collapse = "")
     if (length(raw) == 1) raw <- c(raw, "")
-    raw_df <- read_tsv(raw, col_names = raw.colnames, col_types = coltypes, na = ".", progress = F)
+    raw_df <- read_tsv(raw, col_names = colnames, col_types = coltypes, na = ".", progress = FALSE)
     if (info$tracking & !info$cr) {
         raw_df$cr.info <- NULL  # Drop CR column when not actually used
     }
@@ -269,13 +270,13 @@ handle_htarg <- function(inp, info, is_raw) {
 
 
 # Gets useful metadata about the tracker setup & settings from the file
-get_info <- function(nonsample) {
+get_info <- function(nonsample, firstcol) {
 
-    header <- nonsample[str_detect(nonsample, "^\\*\\*")]
+    header <- nonsample[firstcol == "**"]
     info <- data.frame(
         date = NA, model = NA, version = NA, sample.rate = NA, cr = NA,
-        left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA,
-        mount = NA, filter.level = NA, sample.dtype = NA, event.dtype = NA,
+        left = NA, right = NA, mono = NA, screen.x = NA, screen.y = NA, mount = NA,
+        filter.level = NA, sample.dtype = NA, event.dtype = NA, pupil.dtype = NA,
         velocity = NA, resolution = NA, htarg = NA, input = NA, buttons = NA,
         tracking = NA
     )
@@ -299,17 +300,25 @@ get_info <- function(nonsample) {
     info$screen.x <- screen_res[1]
     info$screen.y <- screen_res[2]
 
-    # Find the samples and events config lines in the non-sample input
-    config_all <- nonsample[str_detect(nonsample, "^EVENTS|^SAMPLES")]
-    if (any(str_detect(config_all, "^EVENTS"))) {
-        config <- rev(config_all[str_detect(config_all, "^EVENTS")])[1]
-        info$event.dtype <- strsplit(config, "\\s+")[[1]][2]
+    # Get pupil size data type (area or diameter)
+    pupil_config <- nonsample[firstcol == "PUPIL"]
+    if (length(pupil_config) > 0) {
+        info$pupil.dtype <- strsplit(tail(pupil_config, 1), "\\s+")[[1]][2]
     }
-    if (any(str_detect(config_all, "^SAMPLES"))) {
-        config <- rev(config_all[str_detect(config_all, "^SAMPLES")])[1]
-        info$sample.dtype <- strsplit(config, "\\s+")[[1]][2]
+
+    # Find the samples and events config lines in the non-sample input, get data types
+    events_config <- nonsample[firstcol == "EVENTS"]
+    samples_config <- nonsample[firstcol == "SAMPLES"]
+    if (length(events_config) > 0) {
+        info$event.dtype <- strsplit(tail(events_config, 1), "\\s+")[[1]][2]
     }
-    if (length(config_all) > 0) {
+    if (length(samples_config) > 0) {
+        info$sample.dtype <- strsplit(tail(samples_config, 1), "\\s+")[[1]][2]
+    }
+
+    # Get last config line in file (preferring sample config) and extract remaining info
+    config <- tail(c(events_config, samples_config), 1)
+    if (length(config) > 0) {
         info$sample.rate <- ifelse(
             grepl('RATE', config),
             as.numeric(gsub('.*RATE\\s+([0-9]+\\.[0-9]+).*', '\\1', config)),
