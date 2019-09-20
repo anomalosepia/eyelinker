@@ -103,26 +103,26 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
     # Initialize list of data output and process different data types
     out <- list()
     if (samples) {
-        if (any(is_raw)) out$raw <- process_raw(inp[is_raw], block[is_raw], info)
+        out$raw <- process_raw(inp[is_raw], block[is_raw], info)
     }
     if (events) {
         is_sacc <- inp_first == "ESACC"
-        if (any(is_sacc)) out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
+        out$sacc <- process_saccades(inp[is_sacc], block[is_sacc], info)
 
         is_fix <- inp_first == "EFIX"
-        if (any(is_fix)) out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
+        out$fix <- process_fixations(inp[is_fix], block[is_fix], info)
 
         is_blink <- inp_first == "EBLINK"
-        if (any(is_blink)) out$blinks <- process_blinks(inp[is_blink], block[is_blink])
+        out$blinks <- process_blinks(inp[is_blink], block[is_blink])
 
         is_msg <- inp_first == "MSG"
-        if (any(is_msg)) out$msg <- process_messages(inp[is_msg], block[is_msg])
+        out$msg <- process_messages(inp[is_msg], block[is_msg])
 
         is_input <- inp_first == "INPUT"
-        if (any(is_input)) out$input <- process_input(inp[is_input], block[is_input])
+        out$input <- process_input(inp[is_input], block[is_input])
 
         is_button <- inp_first == "BUTTON"
-        if (any(is_button)) out$button <- process_buttons(inp[is_button], block[is_button])
+        out$button <- process_buttons(inp[is_button], block[is_button])
     }
     info$tracking <- NULL # needed for parsing, but otherwise redundant with CR
     out$info <- info
@@ -133,34 +133,42 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
 
 process_raw <- function(raw, blocks, info) {
 
-    # Determine if timestamps stored as floats (edf2asc option -ftime, useful for 2000 Hz)
-    float_time <- is_float(strsplit(raw[1], "\\s+")[[1]][1])
+    if (length(raw) == 0) {
 
-    # Generate column names and types based in info in header
-    colinfo <- get_raw_header(info, float_time)
-    raw.colnames <- colinfo$names
-    raw.coltypes <- colinfo$types
+        # If no sample data in file, create empty raw tibble w/ all applicable columns
+        raw <- c("", "")
+        blocks <- integer(0)
+        colnames <- get_raw_header(info)
+        coltypes <- get_coltypes(colnames, float_time = FALSE)
 
-    # Discard any rows with missing columns (usually rows where eye is missing)
-    row_length <- stri_count_fixed(raw, "\t") + 1
-    max_length <- max(row_length)
-    raw <- raw[row_length == max_length]
-    blocks <- blocks[row_length == max_length]
+    } else {
 
-    # Verify that generated columns match up with actual maximum row length
-    length_diff <- max_length - length(raw.coltypes)
-    if (length_diff > 0) {
-        warning(paste(
-            "Unknown columns in raw data.",
-            "Assuming first one is time, please check the others"
-        ))
-        raw.colnames <- c(raw.colnames, paste0("X", 1:length_diff))
-        raw.coltypes <- c(raw.coltypes, rep("c", length_diff))
+        # Determine if timestamps stored as floats (edf2asc option -ftime, useful for 2000 Hz)
+        float_time <- is_float(strsplit(raw[1], "\\s+")[[1]][1])
+
+        # Generate column names and types based in info in header
+        colnames <- get_raw_header(info)
+        coltypes <- get_coltypes(colnames, float_time)
+
+        # Discard any rows with missing columns (usually rows where eye is missing)
+        row_length <- stri_count_fixed(raw, "\t") + 1
+        max_length <- max(row_length)
+        raw <- raw[row_length == max_length]
+        blocks <- blocks[row_length == max_length]
+
+        # Verify that generated columns match up with actual maximum row length
+        length_diff <- max_length - length(colnames)
+        if (length_diff > 0) {
+            warning(paste(
+                "Unknown columns in raw data.",
+                "Assuming first one is time, please check the others"
+            ))
+            colnames <- c("time", paste0("X", 1:(max_length - 1)))
+            coltypes <- paste0(c("i", rep("?", max_length)), collapse = "")
+        }
     }
 
     # Process raw sample data using readr
-    colnames <- raw.colnames
-    coltypes <- paste0(raw.coltypes, collapse = "")
     if (length(raw) == 1) raw <- c(raw, "")
     raw_df <- read_tsv(raw, col_names = colnames, col_types = coltypes, na = ".", progress = FALSE)
     if (info$tracking & !info$cr) {
@@ -184,10 +192,17 @@ process_raw <- function(raw, blocks, info) {
 
 process_events <- function(rows, blocks, colnames) {
 
-    # Parse data, dropping useless first column
+    # If no data, create empty tibble w/ all cols and types
+    if (length(rows) == 0) {
+        rows <- c("", "")
+        blocks <- integer(0)
+    }
+
+    # Parse data, dropping useless first columm
     if (length(rows) == 1) rows <- c(rows, "")
-    df <- read_table2(rows, col_names = FALSE, na = ".")[, -1]
-    names(df) <- colnames
+    colnames <- c('type', colnames) # first col is event type, which we drop later
+    coltypes <- get_coltypes(colnames)
+    df <- read_table2(rows, col_names = colnames, col_types = coltypes, na = ".")[, -1]
 
     # Move eye col to end & make factor, append block numbers to beginning of data frame
     if ("eye" %in% colnames) {
@@ -231,6 +246,7 @@ process_messages <- function(msgs, blocks) {
     msg_df$time <- as.numeric(msg_df$time)
 
     # Append block numbers to beginning of data frame
+    if (length(blocks) == 0) blocks <- integer(0)
     msg_df <- add_column(msg_df, block = blocks, .before = 1)
 
     msg_df
@@ -401,6 +417,11 @@ get_model <- function(header) {
 # Get info about the camera mount type for desk-mounted EyeLinks
 get_mount <- function(mount_str) {
 
+    # Older EyeLink 1000s may be missing "R" in table mount names, we add one if needed
+    if (str_detect(mount_str, "TABLE$")) {
+        mount_str <- paste0(mount_str, "R")
+    }
+
     mounts <- list(
         "MTABLER" = "Desktop / Monocular / Head Stabilized",
         "BTABLER" = "Desktop / Binocular / Head Stabilized",
@@ -421,49 +442,40 @@ get_mount <- function(mount_str) {
 }
 
 
-# Generate column names/types for raw sample data based on gathered info
-get_raw_header <- function(info, float_time) {
+# Generate column names for raw sample data based on gathered info
+get_raw_header <- function(info) {
 
     eyev <- c("xp", "yp", "ps")
-    ctype <- rep("d", 3)
 
     if (!info$mono) {
         eyev <- c(paste0(eyev, "l"), paste0(eyev, "r"))
-        ctype <- rep(ctype, 2)
     }
     if (info$velocity) {
         if (info$mono) {
-            vel <- c("xv", "yv")
+            eyev <- c(eyev, "xv", "yv")
         } else {
-            vel <- c("xvl", "yvl", "xvr", "yvr")
+            eyev <- c(eyev, "xvl", "yvl", "xvr", "yvr")
         }
-        eyev <- c(eyev, vel)
-        ctype <- c(ctype, rep("d", length(vel)))
     }
     if (info$resolution) {
         eyev <- c(eyev, "xr", "yr")
-        ctype <- c(ctype, rep("d", 2))
     }
     if (info$input) {
         eyev <- c(eyev, "input")
-        ctype <- c(ctype, "d")
     }
     if (info$buttons) {
         eyev <- c(eyev, "buttons")
-        ctype <- c(ctype, "d")
     }
     if (info$tracking) {
         # If "TRACKING" in header, cr.info is present in samples whether or not CR actually used
         eyev <- c(eyev, "cr.info")
-        ctype <- c(ctype, "c")
     }
     if (info$htarg) {
         # Three extra columns for remote set-up
         eyev <- c(eyev, "tx", "ty", "td", "remote.info")
-        ctype <- c(ctype, c("d", "d", "d", "c"))
     }
 
-    list(names = c("time", eyev), types = c(ifelse(float_time, "d", "i"), ctype))
+    c("time", eyev)
 }
 
 
@@ -489,6 +501,24 @@ get_sacc_header <- function(info) {
 
 get_fix_header <- function(info) {
     get_event_header(info, c("axp", "ayp", "aps"))
+}
+
+
+# Gets column types from vector of column names, defaults to float unless otherwise specified
+get_coltypes <- function(colnames, float_time = TRUE) {
+
+    time_cols <- c("time", "stime", "etime", "dur")
+    chr_cols <- c("type", "eye", "cr.info", "remote.info")
+    int_cols <- c("button", "state", "value")
+    if (!float_time) int_cols <- c(int_cols, time_cols)
+
+    coltypes <- ifelse(
+        colnames %in% chr_cols, "c",
+        ifelse(colnames %in% int_cols, "i", "d")
+    )
+    coltypes <- paste0(coltypes, collapse = "")
+
+    coltypes
 }
 
 
