@@ -164,7 +164,7 @@ process_raw <- function(raw, blocks, info) {
                 "Assuming first one is time, please check the others"
             ))
             colnames <- c("time", paste0("X", 1:(max_length - 1)))
-            coltypes <- paste0(c("i", rep("?", max_length)), collapse = "")
+            coltypes <- paste0(c("i", rep("?", max_length - 1)), collapse = "")
         }
     }
 
@@ -179,11 +179,13 @@ process_raw <- function(raw, blocks, info) {
     raw_df <- add_column(raw_df, block = blocks, .before = 1)
 
     # Replace missing pupil data (zeros) with NAs
-    if (info$mono) {
-        raw_df$ps[raw_df$ps == 0] <- NA
-    } else {
-        raw_df$psl[raw_df$psl == 0] <- NA
-        raw_df$psr[raw_df$psr == 0] <- NA
+    if (!("X1" %in% names(raw_df))) {
+        if (info$mono) {
+            raw_df$ps[raw_df$ps == 0] <- NA
+        } else {
+            raw_df$psl[raw_df$psl == 0] <- NA
+            raw_df$psr[raw_df$psr == 0] <- NA
+        }
     }
 
     raw_df
@@ -486,7 +488,7 @@ get_event_header <- function(info, xy_cols) {
     if (info$event.dtype == "HREF") {
         xy_cols <- c(paste0("href.", xy_cols), xy_cols)
     }
-    if (info$res) {
+    if (info$resolution) {
         xy_cols <- c(xy_cols, "xr", "yr")
     }
 
