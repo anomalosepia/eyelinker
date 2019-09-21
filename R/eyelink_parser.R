@@ -227,7 +227,8 @@ process_saccades <- function(saccades, blocks, info) {
 
     # Set amplitudes for any saccades missing start/end coords to NAs because they're wonky
     ampl_cols <- which(str_detect(names(sacc_df), "ampl"))
-    sacc_df[is.na(sacc_df$sxp) | is.na(sacc_df$exp), ampl_cols] <- NA
+    partial <- is.na(sacc_df$sxp) | is.na(sacc_df$exp)
+    if (any(partial)) sacc_df[partial, ampl_cols] <- NA
 
     sacc_df
 }

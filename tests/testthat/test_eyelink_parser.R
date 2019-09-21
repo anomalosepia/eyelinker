@@ -185,7 +185,7 @@ test_that("test_remote_info", {
 test_that("test_events", {
 
     # Test handling of events w/ only one row
-    info <- list(resolution = FALSE, event.dtype = "GAZEs")
+    info <- list(resolution = FALSE, event.dtype = "GAZE")
     lines <- c("EFIX R   7545831\t 7545935\t 108\t 355.7\t 228.2\t 130")
     events <- process_fixations(lines, 1, info)
     expect_equal(ncol(events), 8)
@@ -194,4 +194,14 @@ test_that("test_events", {
     # Test handling of files w/ no messages
     msgs <- process_messages(c(), c())
     expect_equal(ncol(msgs), 3)
+
+    # Test handling of NAs in saccades
+    info$event.dtype <- "HREF"
+    lines <- c(
+        "ESACC L  1000370 1000399 30 26 -61 . . 90.09 404 966.1 477.3 . . 2.1e+06 404",
+        "ESACC L  1001968 1002251 284 92 -160 88 -149 0.04 453 982.3 452.6 981.4 455.4 0.05 453"
+    )
+    sacc <- process_saccades(lines, c(1, 1), info)
+    expect_equal(all(is.na(c(sacc$ampl[1], sacc$href.ampl[1]))), TRUE)
+    expect_equal(any(is.na(c(sacc$ampl[2], sacc$href.ampl[2]))), FALSE)
 })
