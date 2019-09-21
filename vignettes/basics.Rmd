@@ -1,10 +1,10 @@
 ---
-title: "Loading EyeLink Data With eyelinker"
+title: "Getting Started With eyelinker"
 author: "Simon Barthelmé & Austin Hurst"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Loading EyeLink Data With eyelinker}
+  %\VignetteIndexEntry{Getting Started With eyelinker}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -19,7 +19,7 @@ require(intervals)
 require(stringr)
 ```
 
-## Getting Started
+## Converting EDFs to ASC
 
 EyeLink eye trackers record data into binary EDFs (EyeLink Data Files), which need to be converted to plain-text ASCII (ASC) files before they can be imported with eyelinker. To convert EDFs into ASC format, you can use the EDFConverter (point-and-click) or edf2asc (command line) utilities provided in the EyeLink Developer's Kit (downloadable on their [support forums](https://www.sr-support.com)).
 

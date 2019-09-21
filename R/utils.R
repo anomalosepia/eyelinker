@@ -1,12 +1,13 @@
 #' From a set of intervals, find which interval values belong to
 #'
-#' This utility function is a replacement for findIntervals that works even when the set of
-#' intervals is discontinuous. It wraps "which_nearest" from the intervals package.
+#' This utility function is a replacement for \code{findInterval} that works even when the set of
+#' intervals is discontinuous. It wraps \code{\link[intervals]{which_nearest}} from the
+#' "intervals" package.
 #' @param x A set of numeric values
 #' @param Intv A two-column matrix or an object of class Intervals
 #' @return For each value in x: if x[i] in in the set of intervals, the index of the corresponding
 #'   interval(s), NA if no interval contains x[i]
-#' @seealso `%In%`
+#' @seealso \%In\%
 #' @examples
 #' start <- c(0, 1, 2)
 #' end <- c(.5, 1.3, 3)
@@ -34,7 +35,7 @@ whichInterval <- function(x, Intv) {
 
 #' Find if value belongs to a set of intervals
 #'
-#' Wrapper around distance_to_nearest from the Intervals package.
+#' Wrapper around \code{\link[intervals]{distance_to_nearest}} from the "intervals" package.
 #' @param x A set of numeric values
 #' @param Intv A set of intervals, defined by a two-column matrix of endpoints or an Intervals
 #'   object

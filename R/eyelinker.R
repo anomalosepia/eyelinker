@@ -4,8 +4,13 @@
 #' This package aims to make importing and working with these files as fast and
 #' easy as possible.
 #'
-#' The main function in the package is read.asc. Refer to the vignettes for
-#' detailed information on the usage and data structure of this function.
+#' For documentation of the structure of the returned data, see the "format" vignette:
+#'
+#' \code{vignette("format", package = "eyelinker")}
+#'
+#' For worked examples illustrating the package in action, see the "basics" vignette:
+#'
+#' \code{vignette("basics", package = "eyelinker")}
 #' @docType package
 #' @name eyelinker
 NULL

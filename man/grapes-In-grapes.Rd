@@ -16,7 +16,7 @@ object}
 A vector of logicals, which are true if x[i] belongs to any of the intervals in the set.
 }
 \description{
-Wrapper around distance_to_nearest from the Intervals package.
+Wrapper around \code{\link[intervals]{distance_to_nearest}} from the "intervals" package.
 }
 \examples{
 start <- c(0, 1, 2)

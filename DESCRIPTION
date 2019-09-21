@@ -6,6 +6,7 @@ Author: Simon Barthelme <simon.barthelme@gipsa-lab.fr>
 Maintainer: Austin Hurst <ajhurst@uwaterloo.ca>
 Description: Imports plain-text ASC data files from EyeLink eye trackers 
     into (relatively) tidy data frames for analysis and visualization.
+License: GPL-3 | file LICENCE
 URL: https://github.com/a-hurst/eyelinker
 BugReports: https://github.com/a-hurst/eyelinker/issues
 Depends: 
@@ -16,9 +17,6 @@ Imports:
     tibble,
     readr,
     intervals
-License: GPL-3
-Encoding: UTF-8
-RoxygenNote: 6.1.1
 Suggests: 
     testthat,
     knitr,
@@ -28,3 +26,4 @@ Suggests:
     tidyr
 VignetteBuilder: knitr
 Encoding: UTF-8
+RoxygenNote: 6.1.1
