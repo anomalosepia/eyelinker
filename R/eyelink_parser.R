@@ -12,29 +12,31 @@
 #' to ignore raw samples and only import events by setting the samples parameter to \code{FALSE}.
 #'
 #' This function returns a list containing the following possible data frames: \describe{
-#'   \item{raw}{The raw sample data from the tracker, containing gaze and pupil data}
-#'   \item{sacc}{Contains data from saccade end events}
-#'   \item{fix}{Contains data from fixation end events}
-#'   \item{blinks}{Contains data from blink end events}
-#'   \item{msg}{Contains messages sent or received by the tracker during recording}
-#'   \item{input}{Contains data from input events}
-#'   \item{button}{Contains data from button press events}
-#'   \item{info}{Contains information about the tracker settings and configuration}
+#'   \item{\code{raw}}{Raw sample data}
+#'   \item{\code{sacc}}{Saccade end events}
+#'   \item{\code{fix}}{Fixation end events}
+#'   \item{\code{blinks}}{Blink end events}
+#'   \item{\code{msg}}{Messages sent or received by the tracker}
+#'   \item{\code{input}}{Input port (TTL) events}
+#'   \item{\code{button}}{Button box / gamepad events}
+#'   \item{\code{info}}{Tracker settings/configuration metadata}
 #' }
 #' The names of the columns in these data frames correspond to column names given in the ASC
 #' section of the EyeLink 1000 User's Guide.
 #'
-#' Note that this function cannot import EDFs directly, they must be converted to plain-text ASC
+#' Note that this function cannot import EDFs directly; they must be converted to plain-text ASC
 #' using the edf2asc utilty before importing.
 #'
 #' @usage
-#' read.asc(fname, samples = TRUE, events = TRUE)
+#' read.asc(fname, samples = TRUE, events = TRUE, parse_all = FALSE)
 #'
 #' @param fname \code{character} vector indicating the name of the .asc file to import.
 #' @param samples \code{logical} indicating whether raw sample data should be imported. Defaults
 #'   to \code{TRUE}.
 #' @param events \code{logical} indicating whether event data (e.g. saccades, blinks, messages,
-#'    etc.) should be imported. Defaults to \code{TRUE}.
+#'   etc.) should be imported. Defaults to \code{TRUE}.
+#' @param parse_all \code{logical} indicating whether samples/events not within START/END
+#'   blocks should be parsed. Defaults to \code{FALSE}.
 #' @return A \code{list} of \code{\link[tibble]{tibble}}s containing data from the .asc file.
 #'
 #' @author Simon Barthelme & Austin Hurst
@@ -48,15 +50,12 @@
 
 # TODO:
 #  - Check for multiple unique RECCFG lines, throw an error if so (can this even happen?)
-#  - Add dummy data frames when data missing, so things like map_df can work
 #  - Add parsing of calibration & drift correct info
-#  - Freshen up documentation & vignettes
 #  - Add function for reading multiple ASCs at once?
 #  - Add function for parsing button samples? They're stored in a weird format
-#  - Improve testthat usage w/ more comprehensive testing
 
 
-read.asc <- function(fname, samples = TRUE, events = TRUE) {
+read.asc <- function(fname, samples = TRUE, events = TRUE, parse_all = FALSE) {
 
     inp <- read_lines(fname, progress = FALSE)
 
@@ -83,22 +82,27 @@ read.asc <- function(fname, samples = TRUE, events = TRUE) {
         info <- ret[[2]]
     }
 
-    # Find blocks and discard lines between block ENDs and next block STARTs
+    # Find blocks and mark lines between block ENDs and next block STARTs
     dividers <- c(which(starts), length(inp))
     block <- cumsum(starts)
     for (i in 2:length(dividers)) {
         start <- dividers[i - 1]
-        end <- dividers[i] - 1
+        end <- dividers[i]
         endline <- which(inp_first[start:end] == "END") + start
         if (length(endline) > 0) {
-            block[endline[1]:end] <- NA
+            block[endline[1]:end] <- block[endline[1]:end] + 0.5
         }
     }
-    in_block <- block != 0 & !is.na(block)
-    inp <- inp[in_block]
-    inp_first <- inp_first[in_block]
-    is_raw <- is_raw[in_block]
-    block <- block[in_block]
+
+    # Unless parsing all input, drop any lines not within a block
+    block[1:dividers[1]] <- block[1:dividers[1]] + 0.5
+    if (!parse_all) {
+        in_block <- block %% 1 == 0
+        inp <- inp[in_block]
+        inp_first <- inp_first[in_block]
+        is_raw <- is_raw[in_block]
+        block <- block[in_block]
+    }
 
     # Initialize list of data output and process different data types
     out <- list()

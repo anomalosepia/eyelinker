@@ -4,7 +4,7 @@
 \alias{read.asc}
 \title{Read EyeLink ASC Files}
 \usage{
-read.asc(fname, samples = TRUE, events = TRUE)
+read.asc(fname, samples = TRUE, events = TRUE, parse_all = FALSE)
 }
 \arguments{
 \item{fname}{\code{character} vector indicating the name of the .asc file to import.}
@@ -14,6 +14,9 @@ to \code{TRUE}.}
 
 \item{events}{\code{logical} indicating whether event data (e.g. saccades, blinks, messages,
 etc.) should be imported. Defaults to \code{TRUE}.}
+
+\item{parse_all}{\code{logical} indicating whether samples/events not within START/END
+blocks should be parsed. Defaults to \code{FALSE}.}
 }
 \value{
 A \code{list} of \code{\link[tibble]{tibble}}s containing data from the .asc file.
@@ -32,19 +35,19 @@ take up 100's of MB of memory. To speed up import and greatly reduce memory load
 to ignore raw samples and only import events by setting the samples parameter to \code{FALSE}.
 
 This function returns a list containing the following possible data frames: \describe{
-  \item{raw}{The raw sample data from the tracker, containing gaze and pupil data}
-  \item{sacc}{Contains data from saccade end events}
-  \item{fix}{Contains data from fixation end events}
-  \item{blinks}{Contains data from blink end events}
-  \item{msg}{Contains messages sent or received by the tracker during recording}
-  \item{input}{Contains data from input events}
-  \item{button}{Contains data from button press events}
-  \item{info}{Contains information about the tracker settings and configuration}
+  \item{\code{raw}}{Raw sample data}
+  \item{\code{sacc}}{Saccade end events}
+  \item{\code{fix}}{Fixation end events}
+  \item{\code{blinks}}{Blink end events}
+  \item{\code{msg}}{Messages sent or received by the tracker}
+  \item{\code{input}}{Input port (TTL) events}
+  \item{\code{button}}{Button box / gamepad events}
+  \item{\code{info}}{Tracker settings/configuration metadata}
 }
 The names of the columns in these data frames correspond to column names given in the ASC
 section of the EyeLink 1000 User's Guide.
 
-Note that this function cannot import EDFs directly, they must be converted to plain-text ASC
+Note that this function cannot import EDFs directly; they must be converted to plain-text ASC
 using the edf2asc utilty before importing.
 }
 \examples{
