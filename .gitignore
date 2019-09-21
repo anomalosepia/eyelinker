@@ -1,6 +1,7 @@
 # Invisible files
 **/.*
 !.gitignore
+!.travis.yml
 
 # Compiled Object files
 *.slo
