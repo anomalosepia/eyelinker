@@ -4,8 +4,8 @@ Title: Import ASC Files from EyeLink Eye Trackers
 Version: 0.2.0
 Author: Simon Barthelme <simon.barthelme@gipsa-lab.fr>
 Maintainer: Austin Hurst <ajhurst@uwaterloo.ca>
-Description: Imports plain-text ASC data files from EyeLink eye
-    trackers into (relatively) tidy data frames for analysis and visualization.
+Description: Imports plain-text ASC data files from EyeLink eye trackers 
+    into (relatively) tidy data frames for analysis and visualization.
 URL: https://github.com/a-hurst/eyelinker
 BugReports: https://github.com/a-hurst/eyelinker/issues
 Depends: 
@@ -19,10 +19,12 @@ Imports:
 License: GPL-3
 Encoding: UTF-8
 RoxygenNote: 6.1.1
-Suggests: testthat,
+Suggests: 
+    testthat,
     knitr,
     rmarkdown,
     dplyr,
     ggplot2,
     tidyr
 VignetteBuilder: knitr
+Encoding: UTF-8
