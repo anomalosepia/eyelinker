@@ -1,26 +1,17 @@
 # eyelinker
 
 [![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://CRAN.R-project.org/package=eyelinker)
+[![Travis build status](https://travis-ci.org/a-hurst/eyelinker.svg?branch=master)](https://travis-ci.org/a-hurst/eyelinker)
+[![codecov](https://codecov.io/gh/a-hurst/eyelinker/branch/master/graph/badge.svg)](https://codecov.io/gh/a-hurst/eyelinker)
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
-An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) tidy data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.
+An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) well-structured data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.
 
 ![Plot of fixations and saccades from ASC](man/figures/ggplot_eye.png)
 
-**NOTE**: This branch is currently under development, and the internal ASC-reading logic has been
-rewritten entirely to improve compatibility and speed. Here is a short-list of the changes:
+Great efforts have been made to make this package fast, stable, and highly compatible. If you encounter any problems using eyelinker (or would like to make a feature request), please open an issue on the project's GitHub page.
 
- - `read.asc` is now 4 to 5x faster than before
- - Rows with missing eye data now retain non-missing values instead of replacing all with `NA`
- - ASC files with INPUT/BUTTON data are now supported
- - Is able to handle ASC files with malformed START/END blocks
- - Is optionally able to parse out-of-block events
- - Is able to correctly parse ASC files with HREF events
- - The `$info` table now contains date of recording, tracker model, tracker mount type, display
-   resolution, and sample rate information.
- 
-However, it is possible that this version breaks support for certain files or workflows. If you encounter any issues
-with this version, please let me know and I'll do my best to fix them.
+**NOTE**: As of version 0.2.0, eyelinker has been rewritten almost entirely for greater stability and speed. Please refer to the `NEWS` file for a comprehensive list of changes and improvements.
 
 ## Installation
 
@@ -41,7 +32,7 @@ library(eyelinker)
 # Example file from SR research that ships with the package
 fpath <- system.file("extdata/mono500.asc.gz", package = "eyelinker")
 dat <- read.asc(fpath)
-plot(dat$raw$time, dat$raw$xp,xlab = "Time (ms)", ylab = "Eye position along x-axis (pix)")
+plot(dat$raw$time, dat$raw$xp,xlab = "Time (ms)", ylab = "Eye position along x-axis (px)")
 
 # For more info:
 vignette("basics", package = "eyelinker")
