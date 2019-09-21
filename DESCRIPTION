@@ -2,10 +2,9 @@ Package: eyelinker
 Type: Package
 Title: Import ASC Files from EyeLink Eye Trackers
 Version: 0.2.0
-Date: 2019-09-16
 Author: Simon Barthelme <simon.barthelme@gipsa-lab.fr>
 Maintainer: Austin Hurst <ajhurst@uwaterloo.ca>
-Description: A package for importing plain-text ASC data files from EyeLink eye
+Description: Imports plain-text ASC data files from EyeLink eye
     trackers into (relatively) tidy data frames for analysis and visualization.
 URL: https://github.com/a-hurst/eyelinker
 BugReports: https://github.com/a-hurst/eyelinker/issues

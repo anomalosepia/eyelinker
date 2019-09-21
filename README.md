@@ -1,10 +1,7 @@
 # eyelinker
 
--
-
-[![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://cran.rstudio.com/web/packages/eyelinker)
+[![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://CRAN.R-project.org/package=eyelinker)
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
-
 
 An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) tidy data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.
 
@@ -17,6 +14,7 @@ rewritten entirely to improve compatibility and speed. Here is a short-list of t
  - Rows with missing eye data now retain non-missing values instead of replacing all with `NA`
  - ASC files with INPUT/BUTTON data are now supported
  - Is able to handle ASC files with malformed START/END blocks
+ - Is optionally able to parse out-of-block events
  - Is able to correctly parse ASC files with HREF events
  - The `$info` table now contains date of recording, tracker model, tracker mount type, display
    resolution, and sample rate information.

@@ -1,4 +1,4 @@
-# eyelinker 0.2
+# eyelinker 0.2.0
 
  * Complete rewrite of `read.asc`, making imports up to 5x faster
  * Added `samples` option to `read.asc`, allowing users to avoid importing slow
@@ -8,6 +8,7 @@
  * Retains non-missing values in sample rows with missing data (previously
    replaced with `NA`s)
  * Added support for files with malformed `START`/`END` blocks
+ * Added optional support for parsing samples/events outside of `START`/`END` blocks
  * Added support for parsing `INPUT` and `BUTTON` events
  * Added support for parsing fixation and saccade events in `HREF` format
  * Improved handling of files with remote target info
