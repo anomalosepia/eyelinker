@@ -1,6 +1,8 @@
 # eyelinker
 
 [![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://CRAN.R-project.org/package=eyelinker)
+[![Travis build status](https://travis-ci.org/a-hurst/eyelinker.svg?branch=travis)](https://travis-ci.org/a-hurst/eyelinker)
+[![codecov](https://codecov.io/gh/a-hurst/eyelinker/branch/travis/graph/badge.svg)](https://codecov.io/gh/a-hurst/eyelinker)
 [![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 
 An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) tidy data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.

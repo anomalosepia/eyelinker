@@ -10,7 +10,7 @@ License: GPL-3 | file LICENCE
 URL: https://github.com/a-hurst/eyelinker
 BugReports: https://github.com/a-hurst/eyelinker/issues
 Depends: 
-    R (>= 3.1.1)
+    R (>= 3.2)
 Imports: 
     stringi,
     stringr,
@@ -23,7 +23,8 @@ Suggests:
     rmarkdown,
     dplyr,
     ggplot2,
-    tidyr
+    tidyr,
+    covr
 VignetteBuilder: knitr
 Encoding: UTF-8
 RoxygenNote: 6.1.1
