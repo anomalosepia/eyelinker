@@ -134,7 +134,7 @@ raw.long <- mutate(raw.long, ts = (time - min(time)) / 1e3) # let's have time in
 ggplot(raw.long, aes(ts, pos, col = coord)) + geom_point()
 ```
 
-In this particular file there are four separate recording periods, corresponding to different "blocks" in the asc file, which we can check using:
+In this particular file there are four separate recording periods, corresponding to different "blocks" in the ASC file, which we can check using:
 
 ```{r fig.width=6.5, fig.height=4}
 ggplot(raw.long, aes(ts, pos, col = coord)) + geom_line() + facet_wrap(~block)
@@ -142,7 +142,7 @@ ggplot(raw.long, aes(ts, pos, col = coord)) + geom_line() + facet_wrap(~block)
 
 ### Downsampling raw data
 
-Performing operations on raw sample data can be quite slow for larger recordings (some .ASC files contain several million samples), so to speed things up you can use dplyr's `filter` function to downsample the data to a lower sample rate:
+Performing operations on raw sample data can be quite slow for larger recordings (some ASC files contain several million samples), so to speed things up you can use dplyr's `filter` function to downsample the data to a lower sample rate:
 
 ```{r}
 # Downsample raw data from 500 Hz to 100 Hz by only keeping every 5th row
@@ -285,7 +285,7 @@ Another type of data contained in ASC files are message events, which are stored
 head(dat$msg)
 ```
 
-The lines correspond to "MSG" lines in the imported ASC file. Since these messages can be anything, `read.asc()` leaves them unparsed: if you're interested in subsetting them or extracting data from them, you can parse them youself using packages such as `stringr` or with the built-in `grep`/`grepl` functions.
+The lines correspond to "MSG" lines in the imported ASC file. Since these messages can be anything, `read.asc()` leaves them unparsed: if you're interested in subsetting them or extracting data from them, you can parse them yourself using packages such as `stringr` or with the built-in `grep`/`grepl` functions.
 
 To illustrate, we'll use `stringr`'s `str_detect()` function to select only rows containing the string "blank_screen":
 

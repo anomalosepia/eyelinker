@@ -5,7 +5,7 @@
    and memory-consuming raw samples if not necessary
  * Added parsing of tracker model/version/configuration, date of recording,
    stimulus display resolution, sample rate, filter level, and more to `$info`
- * Retains non-missing values in sample rows with missing data (previously
+ * Retains non-missing values in sample rows with any missing data (previously
    replaced with `NA`s)
  * Added support for files with malformed `START`/`END` blocks
  * Added optional support for parsing samples/events outside of `START`/`END` blocks

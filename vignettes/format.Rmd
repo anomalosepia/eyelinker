@@ -128,7 +128,7 @@ Column | Description
 
 ## Message Events
 
-The message events data frame contains both messages from the tracker itself (e.g. messages about drift corrects and recording settings) and messages sent to the tracker during recording by the experment program (e.g. the block/trial number, markers of events within the trial, etc.). `read.asc()` makes no attempt to parse message content, leaving this task to the user.
+The message events data frame contains both messages from the tracker itself (e.g. messages about drift corrects and recording settings) and messages sent to the tracker during recording by the experiment program (e.g. the block/trial number, markers of events within the trial, etc.). `read.asc()` makes no attempt to parse message content, leaving this task to the user.
 
 Column | Description
 ------ | -----------

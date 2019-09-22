@@ -22,7 +22,7 @@ blocks should be parsed. Defaults to \code{FALSE}.}
 A \code{list} of \code{\link[tibble]{tibble}}s containing data from the .asc file.
 }
 \description{
-Imports data from EyeLink .ASC files into (relatively) tidy data frames for analysis and
+Imports data from EyeLink ASC files into (relatively) tidy data frames for analysis and
 visualization. Event data and/or raw sample data from the files can be imported, along with
 information about the tracker hardware and configuration. All data is divided into numbered
 blocks using the "START" and "END" messages in the ASC file.
@@ -48,7 +48,7 @@ The names of the columns in these data frames correspond to column names given i
 section of the EyeLink 1000 User's Guide.
 
 Note that this function cannot import EDFs directly; they must be converted to plain-text ASC
-using the edf2asc utilty before importing.
+using the edf2asc utility before importing.
 }
 \examples{
 # Example file from SR research that ships with the package
