@@ -88,8 +88,8 @@ read.asc <- function(fname, samples = TRUE, events = TRUE, parse_all = FALSE) {
     for (i in 2:length(dividers)) {
         start <- dividers[i - 1]
         end <- dividers[i]
-        endline <- which(inp_first[start:end] == "END") + start
-        if (length(endline) > 0) {
+        endline <- which(inp_first[start:end] == "END") + start - 1
+        if (length(endline) > 0 && endline < end) {
             block[endline[1]:end] <- block[endline[1]:end] + 0.5
         }
     }

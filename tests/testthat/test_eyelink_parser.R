@@ -205,3 +205,50 @@ test_that("test_events", {
     expect_equal(all(is.na(c(sacc$ampl[1], sacc$href.ampl[1]))), TRUE)
     expect_equal(any(is.na(c(sacc$ampl[2], sacc$href.ampl[2]))), FALSE)
 })
+
+
+# Test block division edge cases
+test_that("test_block_parsing", {
+
+    testfile <- c(
+        "** VERSION: EYELINK II 1",
+        "** SOURCE: EYELINK II",
+        "** EYELINK II v2.31 Mar 13 2010",
+        "MSG\t2035323 GAZE_COORDS 0.00 0.00 1919.00 1199.00",
+        "MSG\t2035324 !MODE RECORD CR 250 2 1",
+        "START\t 2035326\t LEFT\t RIGHT\t SAMPLES\t EVENTS",
+        "PRESCALER\t 1",
+        "VPRESCALER\t 1",
+        "PUPIL\t AREA",
+        "EVENTS\tGAZE\tLEFT\tRIGHT\tRATE\t 250.00\tTRACKING\tCR\tFILTER\t2",
+        "SAMPLES\tGAZE\tLEFT\tRIGHT\tRATE\t 250.00\tTRACKING\tCR\tFILTER\t2",
+        "2035326\t 955.4\t 602.7\t 1022.0\t 959.0\t 602.2\t 1193.0\t.....",
+        "2035330\t 955.5\t 602.1\t 1022.0\t 958.7\t 601.6\t 1192.0\t.....",
+        "2035334\t 956.8\t 602.4\t 1022.0\t 958.9\t 602.4\t 1191.0\t.....",
+        "MSG\t2035338 TRIAL_ID 1"
+    )
+
+    # Test handling of no END line
+    a <- read.asc(testfile)
+    expect_equal(nrow(a$raw), 3)
+    expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
+
+    # Test handling of END line as last line
+    testfile <- c(testfile, "END\t598729\t SAMPLES\t EVENTS\t RES\t 41.91\t 38.82")
+    a <- read.asc(testfile)
+    expect_equal(nrow(a$raw), 3)
+    expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
+
+    # Test handling of content after last END line
+    testfile <- c(testfile, "MSG\t601379 trialResult 3")
+    a <- read.asc(testfile)
+    expect_equal(nrow(a$raw), 3)
+    expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
+
+    # Test handling of content after last END line when parse_all is TRUE
+    a <- read.asc(testfile, parse_all = TRUE)
+    expect_equal(nrow(a$raw), 3)
+    expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
+    expect_equal("trialResult 3" %in% a$msg$text, TRUE)
+    expect_equal(subset(a$msg, block == 1.5)$text[1], "trialResult 3")
+})
