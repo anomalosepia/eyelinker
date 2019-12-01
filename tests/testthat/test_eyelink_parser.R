@@ -49,19 +49,18 @@ test_that("test_event_headers", {
 })
 
 
-# Test remote.info detection
-test_that("test_remote_info", {
+# Test resolution parsing from .asc
+test_that("test_get_resolution", {
 
-    lines <- c(
-        "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 .............",
-        "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 ...C.TBLRTB..",
-        "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 ...C.TBL.T.L.",
-        "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 ...CF..L...LR",
-        "5578551\t 967.9\t 540.0\t 2233.0\t ..."
-    )
-    regex <- get_htarg_regex(binocular = FALSE)
-    expect_equal(all(grepl(regex, lines[1:4])), TRUE)
-    expect_equal(all(grepl(regex, lines[5])), FALSE)
+    # Test case when equals sign present (rare, but happens)
+    lines <- c("MSG\t1446373 DISPLAY_COORDS = 0 0 1024 768", "")
+    res <- get_resolution(lines)
+    expect_equal(res, c(1025, 769))
+
+    # Test GAZE_COORDS parsing where screen size is in floats
+    lines <- c("MSG\t2361384 GAZE_COORDS 0.00 0.00 1279.00 1023.00", "")
+    res <- get_resolution(lines)
+    expect_equal(res, c(1280, 1024))
 })
 
 
@@ -165,7 +164,7 @@ test_that("test_remote_info", {
     expect_equal(out[[2]]$htarg, FALSE)
     expect_equal(length(out[[1]]), 3)
 
-    # Test adding of tab separator before remote.info lines
+    # Test regex for htarget detection
     lines <- c(
         "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 .............",
         "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 ...C.TBLRTB..",
@@ -173,6 +172,11 @@ test_that("test_remote_info", {
         "5578551\t 967.9\t 540.0\t 2233.0\t ...\t -128.0\t -262.0\t 285.6 ...CF..L...LR",
         "5578551\t 967.9\t 540.0\t 2233.0\t ..."
     )
+    regex <- get_htarg_regex(binocular = FALSE)
+    expect_equal(all(grepl(regex, lines[1:4])), TRUE)
+    expect_equal(all(grepl(regex, lines[5])), FALSE)
+
+    # Test adding of tab separator before remote.info lines
     out <- handle_htarg(lines, info, rep(TRUE, 5))
     tab_counts <- stri_count_fixed(out[[1]], "\t")
     expect_equal(out[[2]]$htarg, TRUE)

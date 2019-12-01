@@ -382,9 +382,10 @@ get_resolution <- function(nonsample) {
     for (pattern in c("DISPLAY_COORDS", "GAZE_COORDS", "RESOLUTION")) {
         display_xy <- nonsample[str_detect(nonsample, fixed(pattern))]
         if (length(display_xy) == 0) next
-        display_xy <- gsub(paste0(".* ", pattern, "\\s+(.*)"), "\\1", display_xy[1])
+        display_xy <- gsub(paste0(".* ", pattern, "\\D+(.*)"), "\\1", display_xy[1])
         display_xy <- as.numeric(unlist(strsplit(display_xy, split = "\\s+")))
         res <- c(display_xy[3] - display_xy[1] + 1, display_xy[4] - display_xy[2] + 1)
+        break
     }
 
     res

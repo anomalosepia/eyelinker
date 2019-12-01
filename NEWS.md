@@ -1,3 +1,8 @@
+# eyelinker (development version)
+
+ * Fixed bug reading screen resolution from certain .asc files.
+
+
 # eyelinker 0.2.0
 
  * Complete rewrite of `read.asc`, making imports up to 5x faster

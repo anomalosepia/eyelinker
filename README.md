@@ -32,7 +32,7 @@ library(eyelinker)
 # Example file from SR research that ships with the package
 fpath <- system.file("extdata/mono500.asc.gz", package = "eyelinker")
 dat <- read.asc(fpath)
-plot(dat$raw$time, dat$raw$xp,xlab = "Time (ms)", ylab = "Eye position along x-axis (px)")
+plot(dat$raw$time, dat$raw$xp, xlab = "Time (ms)", ylab = "Eye position along x-axis (px)")
 
 # For more info:
 vignette("basics", package = "eyelinker")
