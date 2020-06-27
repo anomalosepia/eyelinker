@@ -12,13 +12,14 @@ whichInterval(x, Intv)
 \item{Intv}{A two-column matrix or an object of class Intervals}
 }
 \value{
-For each value in x: if x[i] in in the set of intervals, the index of the corresponding
+For each value in x: if x[i] is in the set of intervals, the index of the corresponding
   interval(s), NA if no interval contains x[i]
 }
 \description{
-This utility function is a replacement for \code{findInterval} that works even when the set of
-intervals is discontinuous. It wraps \code{\link[intervals]{which_nearest}} from the
-"intervals" package.
+Given a vector of numeric values and a set of defined intervals, returns which interval
+(if any) each number belongs to. Intervals can be specified using either two-column
+matrices or \code{\link[intervals:Intervals-class]{Intervals}} objects from the
+\code{intervals} package.
 }
 \examples{
 start <- c(0, 1, 2)

@@ -16,7 +16,10 @@ object}
 A vector of logicals, which are true if x[i] belongs to any of the intervals in the set.
 }
 \description{
-Wrapper around \code{\link[intervals]{distance_to_nearest}} from the "intervals" package.
+Returns whether numeric values on the left-hand side of the operator fall within any of the
+specified intervals on the right-hand side. Intervals can be specified using either two-column
+matrices or \code{\link[intervals:Intervals-class]{Intervals}} objects from the
+\code{intervals} package.
 }
 \examples{
 start <- c(0, 1, 2)

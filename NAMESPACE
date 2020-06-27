@@ -2,6 +2,7 @@
 
 export("%In%")
 export(read.asc)
+export(read_asc)
 export(whichInterval)
 importFrom(intervals,Intervals)
 importFrom(intervals,distance_to_nearest)
