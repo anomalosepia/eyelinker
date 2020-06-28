@@ -7,7 +7,7 @@
 x \%In\% Intv
 }
 \arguments{
-\item{x}{A set of numeric values}
+\item{x}{A vector of numeric values}
 
 \item{Intv}{A set of intervals, defined by a two-column matrix of endpoints or an Intervals
 object}

@@ -1,10 +1,9 @@
 #' From a set of intervals, find which interval values belong to
 #'
-#' Given a vector of numeric values and a set of defined intervals, returns which interval
-#' (if any) each number belongs to. Intervals can be specified using either two-column
-#' matrices or \code{\link[intervals:Intervals-class]{Intervals}} objects from the
-#' \code{intervals} package.
-#' @param x A set of numeric values
+#' Returns which interval (if any) each number in a vector belongs to, given a set of
+#' user-defined intervals. Intervals can be specified using either two-column matrices or
+#' \code{\link[intervals:Intervals-class]{Intervals}} objects from the \code{intervals} package.
+#' @param x A vector of numeric values
 #' @param Intv A two-column matrix or an object of class Intervals
 #' @return For each value in x: if x[i] is in the set of intervals, the index of the corresponding
 #'   interval(s), NA if no interval contains x[i]
@@ -40,7 +39,7 @@ whichInterval <- function(x, Intv) {
 #' specified intervals on the right-hand side. Intervals can be specified using either two-column
 #' matrices or \code{\link[intervals:Intervals-class]{Intervals}} objects from the
 #' \code{intervals} package.
-#' @param x A set of numeric values
+#' @param x A vector of numeric values
 #' @param Intv A set of intervals, defined by a two-column matrix of endpoints or an Intervals
 #'   object
 #' @return A vector of logicals, which are true if x[i] belongs to any of the intervals in the set.

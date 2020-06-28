@@ -7,7 +7,7 @@
 whichInterval(x, Intv)
 }
 \arguments{
-\item{x}{A set of numeric values}
+\item{x}{A vector of numeric values}
 
 \item{Intv}{A two-column matrix or an object of class Intervals}
 }
@@ -16,10 +16,9 @@ For each value in x: if x[i] is in the set of intervals, the index of the corres
   interval(s), NA if no interval contains x[i]
 }
 \description{
-Given a vector of numeric values and a set of defined intervals, returns which interval
-(if any) each number belongs to. Intervals can be specified using either two-column
-matrices or \code{\link[intervals:Intervals-class]{Intervals}} objects from the
-\code{intervals} package.
+Returns which interval (if any) each number in a vector belongs to, given a set of
+user-defined intervals. Intervals can be specified using either two-column matrices or
+\code{\link[intervals:Intervals-class]{Intervals}} objects from the \code{intervals} package.
 }
 \examples{
 start <- c(0, 1, 2)

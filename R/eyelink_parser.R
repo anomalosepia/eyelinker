@@ -47,7 +47,6 @@
 #' plot(dat$raw$time, dat$raw$xp, xlab = "Time (ms)", ylab = "Eye position along x-axis (pix)")
 #'
 #' @export read.asc
-#' @export read_asc
 
 # TODO:
 #  - Check for multiple unique RECCFG lines, throw an error if so (can this even happen?)
@@ -135,6 +134,9 @@ read.asc <- function(fname, samples = TRUE, events = TRUE, parse_all = FALSE) {
     out
 }
 
+
+#' @rdname read.asc
+#' @export
 read_asc <- read.asc  # Alias for keeping with tidyverse-style naming conventions
 
 
