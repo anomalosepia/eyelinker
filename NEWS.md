@@ -1,6 +1,9 @@
 # eyelinker (development version)
 
- * Fixed bug reading screen resolution from certain .asc files.
+ * Fixed bug reading screen resolution from certain .asc files
+ * Added tidyverse-style `read_asc` alias for `read.asc`
+ * Improved documentation for interval utility functions
+ * Fixed handling of files containing random rows with too many columns (#1)
 
 
 # eyelinker 0.2.0

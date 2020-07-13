@@ -159,21 +159,21 @@ process_raw <- function(raw, blocks, info) {
         colnames <- get_raw_header(info)
         coltypes <- get_coltypes(colnames, float_time)
 
-        # Discard any rows with missing columns (usually rows where eye is missing)
+        # Discard any rows with too many or too few columns (usually rows where eye is missing)
         row_length <- stri_count_fixed(raw, "\t") + 1
-        max_length <- max(row_length)
-        raw <- raw[row_length == max_length]
-        blocks <- blocks[row_length == max_length]
+        med_length <- median(row_length)
+        raw <- raw[row_length == med_length]
+        blocks <- blocks[row_length == med_length]
 
         # Verify that generated columns match up with actual maximum row length
-        length_diff <- max_length - length(colnames)
+        length_diff <- med_length - length(colnames)
         if (length_diff > 0) {
             warning(paste(
                 "Unknown columns in raw data.",
                 "Assuming first one is time, please check the others"
             ))
-            colnames <- c("time", paste0("X", 1:(max_length - 1)))
-            coltypes <- paste0(c("i", rep("?", max_length - 1)), collapse = "")
+            colnames <- c("time", paste0("X", 1:(med_length - 1)))
+            coltypes <- paste0(c("i", rep("?", med_length - 1)), collapse = "")
         }
     }
 

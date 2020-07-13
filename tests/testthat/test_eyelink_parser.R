@@ -112,14 +112,15 @@ test_that("test_process_raw", {
         input = FALSE, buttons = FALSE, tracking = TRUE, htarg = FALSE
     )
     lines <- c(
+        "5578547\t 967.5\t 540.2\t 2231.0\t .",
         "5578551\t 967.9\t 540.0\t 2233.0\t .",
         "5578555\t     .\t     .\t    0.0\t ."
     )
 
     # Test handling of unnecessary cr.info column
-    raw <- process_raw(lines, c(1, 1), info)
+    raw <- process_raw(lines, c(1, 1, 1), info)
     expect_equal(ncol(raw), 5)
-    expect_equal(nrow(raw), 2)
+    expect_equal(nrow(raw), 3)
 
     # Test handling of single row only
     raw <- process_raw(lines[1], 1, info)
@@ -128,9 +129,9 @@ test_that("test_process_raw", {
 
     # Test handling of unknown columns
     info$tracking <- FALSE
-    raw <- expect_warning(process_raw(lines, c(1, 1), info))
+    raw <- expect_warning(process_raw(lines, c(1, 1, 1), info))
     expect_equal(ncol(raw), 6)
-    expect_equal(nrow(raw), 2)
+    expect_equal(nrow(raw), 3)
     expect_equal("X1" %in% names(raw), TRUE)
 
     # Test handling of files w/ no samples
@@ -138,15 +139,18 @@ test_that("test_process_raw", {
     expect_equal(ncol(raw), 5)
     expect_equal("xp" %in% names(raw), TRUE)
 
-    # Test handling of lines with inconsistent lengths
-    lines <- c(
-        "5578551\t 967.9\t 540.0\t 2233.0\t .",
-        "5578555\t     .\t     .\t    0.0"
-    )
+    # Test handling of random rows with too few columns
     info$tracking <- TRUE
-    raw <- process_raw(lines, c(1, 1), info)
+    lines[3] <- "5578555\t     .\t     .\t    0.0"
+    raw <- process_raw(lines, c(1, 1, 1), info)
     expect_equal(ncol(raw), 5)
-    expect_equal(nrow(raw), 1)
+    expect_equal(nrow(raw), 2)
+
+    # Test handling of random rows with too many columns
+    lines[3] <- "5578555\t   .\t   .\t    0.0\t   .\t   .\t    0.0"
+    raw <- process_raw(lines, c(1, 1, 1), info)
+    expect_equal(ncol(raw), 5)
+    expect_equal(nrow(raw), 2)
 })
 
 
