@@ -179,7 +179,7 @@ process_raw <- function(raw, blocks, info) {
 
     # Process raw sample data using readr
     if (length(raw) == 1) raw <- c(raw, "")
-    raw_df <- read_tsv(raw, col_names = colnames, col_types = coltypes, na = ".", progress = FALSE)
+    raw_df <- read_tsv(I(raw), col_names = colnames, col_types = coltypes, na = ".", progress = FALSE)
     if (info$tracking & !info$cr) {
         raw_df$cr.info <- NULL  # Drop CR column when not actually used
     }
