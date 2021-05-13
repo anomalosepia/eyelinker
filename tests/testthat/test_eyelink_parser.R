@@ -237,24 +237,24 @@ test_that("test_block_parsing", {
     )
 
     # Test handling of no END line
-    a <- read.asc(testfile)
+    a <- read.asc(I(testfile))
     expect_equal(nrow(a$raw), 3)
     expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
 
     # Test handling of END line as last line
     testfile <- c(testfile, "END\t598729\t SAMPLES\t EVENTS\t RES\t 41.91\t 38.82")
-    a <- read.asc(testfile)
+    a <- read.asc(I(testfile))
     expect_equal(nrow(a$raw), 3)
     expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
 
     # Test handling of content after last END line
     testfile <- c(testfile, "MSG\t601379 trialResult 3")
-    a <- read.asc(testfile)
+    a <- read.asc(I(testfile))
     expect_equal(nrow(a$raw), 3)
     expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
 
     # Test handling of content after last END line when parse_all is TRUE
-    a <- read.asc(testfile, parse_all = TRUE)
+    a <- read.asc(I(testfile), parse_all = TRUE)
     expect_equal(nrow(a$raw), 3)
     expect_equal("TRIAL_ID 1" %in% a$msg$text, TRUE)
     expect_equal("trialResult 3" %in% a$msg$text, TRUE)
