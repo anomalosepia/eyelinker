@@ -1,4 +1,4 @@
-# eyelinker (development version)
+# eyelinker 0.2.1
 
  * Fixed bug reading screen resolution from certain .asc files
  * Added tidyverse-style aliases for `read.asc`, `whichInterval`, and `%In%`
