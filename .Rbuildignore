@@ -1,5 +1,6 @@
-## Ignore travis config file
+## Ignore CI config files
 ^\.travis\.yml$
 ^appveyor\.yml$
+^\.github$
 ^cran-comments\.md$
 ^CRAN-RELEASE$

@@ -1,5 +1,6 @@
 # Invisible files
 **/.*
+!.github
 !.gitignore
 !.travis.yml
 
