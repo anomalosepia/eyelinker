@@ -4,6 +4,7 @@
  * Added tidyverse-style `read_asc` alias for `read.asc`
  * Improved documentation for interval utility functions
  * Fixed handling of files containing random rows with too many columns (#1)
+ * Added compatibility with readr 2.0.0 (#2, by Jim Hester)
 
 
 # eyelinker 0.2.0
