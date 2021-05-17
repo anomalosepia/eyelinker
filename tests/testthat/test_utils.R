@@ -21,6 +21,9 @@ test_that("test_whichInterval", {
     tst_intervals <- whichInterval(x, intv)
     expect_equal(tst_intervals, c(1, 3, 2, 1))
 
+    # Test integer input
+    expect_equal(whichInterval(0L, intv), 1)  # check if 0 in 1st interval
+
     # Test tidyverse-style alias
     expect_equal(which_interval(2.5, intv), 3)
 
@@ -43,6 +46,9 @@ test_that("test_In_operator", {
     values <- c(5, 0, 0.8, 1.2, 1.8, 2.3)
     expected <- c(FALSE, TRUE, FALSE, TRUE, FALSE, TRUE)
     expect_equal(values %In% intv, expected)
+
+    # Test integer input
+    expect_equal(0L %In% intv, TRUE)
 
     # Test tidyverse-style alias
     expect_equal(0.5 %within% intv, TRUE)
