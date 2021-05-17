@@ -33,6 +33,10 @@ whichInterval <- function(x, Intv) {
     wn$which_nearest
 }
 
+#' @rdname whichInterval
+#' @export
+which_interval <- whichInterval  # Alias for keeping with tidyverse-style naming conventions
+
 #' Find if value belongs to a set of intervals
 #'
 #' Returns whether numeric values on the left-hand side of the operator fall within any of the
@@ -57,3 +61,7 @@ whichInterval <- function(x, Intv) {
     }
     distance_to_nearest(x, Intv) == 0
 }
+
+#' @rdname grapes-In-grapes
+#' @export
+`%within%` <- `%In%`  # Alias for keeping with tidyverse-style naming conventions

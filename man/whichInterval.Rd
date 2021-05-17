@@ -2,9 +2,12 @@
 % Please edit documentation in R/utils.R
 \name{whichInterval}
 \alias{whichInterval}
+\alias{which_interval}
 \title{From a set of intervals, find which interval values belong to}
 \usage{
 whichInterval(x, Intv)
+
+which_interval(x, Intv)
 }
 \arguments{
 \item{x}{A vector of numeric values}

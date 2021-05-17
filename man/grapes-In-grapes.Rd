@@ -2,9 +2,12 @@
 % Please edit documentation in R/utils.R
 \name{\%In\%}
 \alias{\%In\%}
+\alias{\%within\%}
 \title{Find if value belongs to a set of intervals}
 \usage{
 x \%In\% Intv
+
+x \%within\% Intv
 }
 \arguments{
 \item{x}{A vector of numeric values}
