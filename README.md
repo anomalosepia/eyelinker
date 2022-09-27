@@ -1,11 +1,6 @@
 # eyelinker
 
-<!-- badges: start -->
-[![CRAN Version](http://www.r-pkg.org/badges/version/eyelinker)](https://CRAN.R-project.org/package=eyelinker)
-[![R-CMD-check](https://github.com/a-hurst/eyelinker/workflows/R-CMD-check/badge.svg)](https://github.com/a-hurst/eyelinker/actions)
-[![codecov](https://codecov.io/gh/a-hurst/eyelinker/branch/master/graph/badge.svg)](https://codecov.io/gh/a-hurst/eyelinker)
-[![Lifecycle: maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
-<!-- badges: end -->
+# this is a fork to address some parsing issues with the original repo. the "fixes" are not thoroughly tested. if you're using this for serious work you should use the parent repository.
 
 An R package for importing plain-text ASC data files from EyeLink eye trackers into (relatively) well-structured data frames. EDF files first must be converted to ASC using the `edf2asc` tool before they can be imported.
 
