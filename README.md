@@ -23,7 +23,7 @@ install.packages("eyelinker")
 
 # Install the latest development version from GitHub:
 require(devtools)
-devtools::install_github("a-hurst/eyelinker")
+devtools::install_github("anomalosepia/eyelinker")
 ```
 
 ## Usage
