@@ -260,7 +260,7 @@ process_messages <- function(msgs, blocks) {
   #msg_df$time <- as.numeric(msg_df$time)
   
   # adam modified
-  msg_mat <-str_split_fixed(testString,'\\s',n=3)
+  msg_mat <-str_split_fixed(msgs,'\\s',n=3)
   #msg_mat <- stri_split_fixed(testString, " ", 2, simplify = TRUE)
   
   msg_df <- as_tibble(msg_mat, .name_repair = ~ c("msg","time", "text"))
